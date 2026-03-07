@@ -1,0 +1,215 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Driver {
+  id                 Int                 @id @default(autoincrement())
+  name               String              @unique
+  code               String              @unique @db.Char(3)
+  number             Int                 @unique
+  enabled            Boolean             @default(true)
+  country            String
+  headshotUrl        String?
+  teamId             Int
+  team               Team                @relation(fields: [teamId], references: [id])
+  raceEntries        RaceEntry[]
+  sprintEntries      SprintEntry[]
+  qualifyEntries     QualifyEntry[]
+  betRaceGridItems   BetRaceGridItem[]
+  betSprintGridItems BetSprintGridItem[]
+}
+
+model Team {
+  id             Int            @id @default(autoincrement())
+  name           String         @unique
+  color          String
+  country        String
+  logoUrl        String?
+  carUrl         String?
+  drivers        Driver[]
+  raceEntries    RaceEntry[]
+  sprintEntries  SprintEntry[]
+  qualifyEntries QualifyEntry[]
+}
+
+model User {
+  id         Int         @id @default(autoincrement())
+  email      String      @unique
+  username  String   @unique  // Adicione esta linha
+  password   String
+  name       String
+  category   String     @default("Haas")
+  betRaces   BetRace[]
+  betSprints BetSprint[]
+  inviteCode   InviteCode?
+}
+
+model Season {
+  id          Int       @id @default(autoincrement())
+  year        Int       @unique
+  isActive    Boolean   @default(true)
+  description String?
+  races       Race[]
+  sprints     Sprint[]
+  qualifies   Qualify[]
+}
+
+model GrandPrix {
+  id          Int       @id @default(autoincrement())
+  name        String    @unique
+  country     String
+  trackName   String
+  trackMapUrl String?
+  races       Race[]
+  sprints     Sprint[]
+  qualifies   Qualify[]
+}
+
+model Qualify {
+  id          Int            @id @default(autoincrement())
+  round       Int
+  date        DateTime
+  seasonId    Int
+  grandPrixId Int
+  cancelled   Boolean        @default(false)
+  season      Season         @relation(fields: [seasonId], references: [id])
+  grandPrix   GrandPrix      @relation(fields: [grandPrixId], references: [id])
+  grid        QualifyEntry[]
+}
+
+model Race {
+  id          Int         @id @default(autoincrement())
+  round       Int
+  date        DateTime
+  seasonId    Int
+  grandPrixId Int
+  safetyCar   Int         @default(0)
+  cancelled   Boolean     @default(false)
+  season      Season      @relation(fields: [seasonId], references: [id])
+  grandPrix   GrandPrix   @relation(fields: [grandPrixId], references: [id])
+  grid        RaceEntry[]
+  bets        BetRace[]
+}
+
+model Sprint {
+  id          Int           @id @default(autoincrement())
+  round       Int
+  date        DateTime
+  seasonId    Int
+  grandPrixId Int
+  safetyCar   Int           @default(0)
+  cancelled   Boolean       @default(false)
+  season      Season        @relation(fields: [seasonId], references: [id])
+  grandPrix   GrandPrix     @relation(fields: [grandPrixId], references: [id])
+  grid        SprintEntry[]
+  bets        BetSprint[]
+}
+
+model BetRace {
+  id            Int               @id @default(autoincrement())
+  userId        Int
+  raceId        Int
+  predictedSC   Int               @default(0)
+  predictedDNF  Int               @default(0)
+  createdAt     DateTime          @default(now())
+  user          User              @relation(fields: [userId], references: [id])
+  race          Race              @relation(fields: [raceId], references: [id])
+  predictedGrid BetRaceGridItem[]
+}
+
+model BetSprint {
+  id            Int                 @id @default(autoincrement())
+  userId        Int
+  sprintId      Int
+  createdAt     DateTime            @default(now())
+  user          User                @relation(fields: [userId], references: [id])
+  sprint        Sprint              @relation(fields: [sprintId], references: [id])
+  predictedGrid BetSprintGridItem[]
+}
+
+model BetRaceGridItem {
+  id                Int     @id @default(autoincrement())
+  betId             Int
+  driverId          Int
+  predictedPosition Int
+  fastestLap        Boolean @default(false)
+  favorite          Boolean @default(false)
+  bet               BetRace @relation(fields: [betId], references: [id])
+  driver            Driver  @relation(fields: [driverId], references: [id])
+
+  @@unique([betId, predictedPosition])
+}
+
+model BetSprintGridItem {
+  id                Int       @id @default(autoincrement())
+  betId             Int
+  driverId          Int
+  predictedPosition Int
+  bet               BetSprint @relation(fields: [betId], references: [id])
+  driver            Driver    @relation(fields: [driverId], references: [id])
+
+  @@unique([betId, predictedPosition])
+}
+
+model RaceEntry {
+  id             Int     @id @default(autoincrement())
+  raceId         Int
+  driverId       Int
+  teamId         Int
+  startPosition  Int     @default(99)
+  finishPosition Int     @default(99)
+  points         Float   @default(0)
+  dns            Boolean @default(false)
+  dnf            Boolean @default(false)
+  fastestLap     Boolean @default(false)
+  race           Race    @relation(fields: [raceId], references: [id])
+  driver         Driver  @relation(fields: [driverId], references: [id])
+  team           Team    @relation(fields: [teamId], references: [id])
+
+  @@unique([raceId, driverId])
+}
+
+model SprintEntry {
+  id             Int     @id @default(autoincrement())
+  sprintId       Int
+  driverId       Int
+  teamId         Int
+  startPosition  Int     @default(99)
+  finishPosition Int     @default(99)
+  points         Float   @default(0)
+  dns            Boolean @default(false)
+  dnf            Boolean @default(false)
+  sprint         Sprint  @relation(fields: [sprintId], references: [id])
+  driver         Driver  @relation(fields: [driverId], references: [id])
+  team           Team    @relation(fields: [teamId], references: [id])
+
+  @@unique([sprintId, driverId])
+}
+
+model QualifyEntry {
+  id             Int     @id @default(autoincrement())
+  qualifyId      Int
+  driverId       Int
+  teamId         Int
+  finishPosition Int     @default(99)
+  dns            Boolean @default(false)
+  qualify        Qualify @relation(fields: [qualifyId], references: [id])
+  driver         Driver  @relation(fields: [driverId], references: [id])
+  team           Team    @relation(fields: [teamId], references: [id])
+
+  @@unique([qualifyId, driverId])
+}
+
+model InviteCode {
+  id        Int      @id @default(autoincrement())
+  userId    Int?     @unique
+  code      String   @unique
+  used      Boolean  @default(false)
+  category  String   @default("Haas")
+  createdAt DateTime @default(now())
+  user      User?    @relation(fields: [userId], references: [id])
+}
