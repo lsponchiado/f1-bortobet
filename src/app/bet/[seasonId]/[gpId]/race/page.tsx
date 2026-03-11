@@ -1,13 +1,13 @@
 import { prisma } from '@/lib/prisma';
 import { auth } from "@/auth";
 import { redirect } from "next/navigation";
-import Navbar from "@/components/Navbar";
+import { Navbar } from '@/components/Navbar';
 import BetRaceClient from './BetRaceClient';
 
-export default async function RaceBetPage({ 
-  params 
-}: { 
-  params: Promise<{ seasonId: string; gpId: string }> 
+export default async function RaceBetPage({
+  params
+}: {
+  params: Promise<{ seasonId: string; gpId: string }>
 }) {
   const session = await auth();
   if (!session?.user?.id) redirect("/login");
@@ -17,51 +17,78 @@ export default async function RaceBetPage({
   const seasonId = parseInt(resolvedParams.seasonId, 10);
   const gpId = parseInt(resolvedParams.gpId, 10);
 
-  // 1. Busca a corrida e os pilotos habilitados
-  const [race, drivers] = await Promise.all([
-    prisma.race.findFirst({
-      where: { seasonId, grandPrixId: gpId }
+  const [raceSession, drivers, qualifyingSession] = await Promise.all([
+    prisma.session.findFirst({
+      where: { type: 'RACE', seasonId, grandPrixId: gpId },
+      include: { raceConfig: true },
     }),
     prisma.driver.findMany({
       where: { enabled: true },
       include: { team: true },
       orderBy: [{ team: { name: 'asc' } }, { name: 'asc' }]
-    })
+    }),
+    prisma.session.findFirst({
+      where: { type: 'QUALIFYING', seasonId, grandPrixId: gpId },
+    }),
   ]);
 
-  if (!race) redirect("/");
+  if (!raceSession) redirect("/");
 
-  // 2. Busca a aposta existente usando o nome de relação 'predictedGrid'
-  const existingBet = await prisma.betRace.findFirst({
-    where: { 
-      raceId: race.id,
-      userId: userId 
-    },
-    include: {
-      predictedGrid: {
-        orderBy: { predictedPosition: 'asc' }
+  const qualifyingEntries = qualifyingSession
+    ? await prisma.sessionEntry.findMany({
+        where: { sessionId: qualifyingSession.id },
+        select: { driverId: true, finishPosition: true },
+      })
+    : [];
+  const gridPositions: Record<number, number> = Object.fromEntries(
+    qualifyingEntries.map((e) => [e.driverId, e.finishPosition])
+  );
+
+  const [existingBet, doublePointsTokensUsed] = await Promise.all([
+    prisma.betRace.findFirst({
+      where: {
+        sessionId: raceSession.id,
+        userId,
+      },
+      include: {
+        predictedGrid: {
+          orderBy: { predictedPosition: 'asc' }
+        }
       }
-    }
-  });
+    }),
+    prisma.betRace.count({
+      where: {
+        userId,
+        sessionId: { not: raceSession.id },
+        session: { seasonId },
+        doublePoints: true,
+      }
+    }),
+  ]);
 
-  // 3. Formata os dados para o BetRaceClient
-  // Extraímos os IDs de Volta Rápida e Favorito percorrendo os itens do grid
   const initialBet = existingBet ? {
     id: existingBet.id,
     gridIds: existingBet.predictedGrid.map(item => item.driverId),
     fastestLapId: existingBet.predictedGrid.find(item => item.fastestLap)?.driverId || null,
-    favoriteId: existingBet.predictedGrid.find(item => item.favorite)?.driverId || null,
+    allInDriverId: existingBet.driverId ?? null,
+    doublePoints: existingBet.doublePoints ?? false,
     predictedSC: existingBet.predictedSC,
     predictedDNF: existingBet.predictedDNF,
   } : undefined;
 
   return (
     <div className="flex flex-col h-screen bg-[#050505] text-white overflow-hidden">
-      <Navbar username={session.user.username || session.user.name || "User"} />
-      <BetRaceClient 
-        drivers={drivers} 
-        raceId={race.id} 
-        initialBet={initialBet} 
+      <Navbar username={(session.user as any).username || session.user.name || 'User'} />
+      <BetRaceClient
+        drivers={drivers}
+        sessionId={raceSession.id}
+        initialBet={initialBet}
+        doublePointsTokensUsed={doublePointsTokensUsed}
+        allowDoublePoints={raceSession.raceConfig?.allowDoublePoints ?? true}
+        allowHailMary={raceSession.raceConfig?.allowHailMary ?? true}
+        allowUnderdog={raceSession.raceConfig?.allowUnderdog ?? true}
+        allowFreefall={raceSession.raceConfig?.allowFreefall ?? true}
+        gridPositions={gridPositions}
       />
     </div>
   );

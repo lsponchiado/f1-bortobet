@@ -1,0 +1,28 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npx prisma db push)",
+      "Bash(npx prisma db push --accept-data-loss)",
+      "Bash(npx tsc --noEmit)",
+      "Bash(npx prisma generate)",
+      "WebFetch(domain:api.openf1.org)",
+      "Bash(ls \"c:\\\\Users\\\\lucas\\\\Documents\\\\Dev\\\\f1-project\\\\prisma\\\\migrations\"\" 2>/dev/null || echo \"pasta migrations nao existe \")",
+      "Bash(npm install i18n-iso-countries)",
+      "Bash(npm list i18n-iso-countries)",
+      "Bash(curl -s \"https://api.openf1.org/v1/race_control?session_key=9574&category=SafetyCar\")",
+      "Bash(curl -s \"https://api.openf1.org/v1/sessions?year=2025&session_name=Race&country_name=Australia\")",
+      "Bash(curl -s \"https://api.openf1.org/v1/race_control?session_key=9693\")",
+      "Bash(node -e \"const d=require\\(''fs''\\).readFileSync\\(''/dev/stdin'',''utf8''\\); const data=JSON.parse\\(d\\); data.filter\\(e=>e.message&&e.message.toUpperCase\\(\\).includes\\(''SAFETY''\\)||e.safety_car_type\\).forEach\\(e=>console.log\\(JSON.stringify\\(e\\)\\)\\)\")",
+      "Bash(node -e \"const data=JSON.parse\\(require\\(''fs''\\).readFileSync\\(process.env.USERPROFILE+''/rc.json'',''utf8''\\)\\); const cats=[...new Set\\(data.map\\(e=>e.category\\)\\)]; console.log\\(''Categories:'', cats\\); console.log\\(''---''\\); data.filter\\(e=>e.category===''VirtualSafetyCar''||e.message&&e.message.toUpperCase\\(\\).includes\\(''VIRTUAL''\\)\\).forEach\\(e=>console.log\\(JSON.stringify\\(e\\)\\)\\)\")",
+      "Bash(curl -s \"https://api.openf1.org/v1/sessions?year=2026&session_name=Race&country_name=Australia\")",
+      "Bash(node -e \":*)",
+      "Bash(npx tsx -e \":*)",
+      "Bash(npx tsx scripts/_client.ts)",
+      "Bash(npx tsx -e \"import { prisma } from ''./scripts/_client.ts''; const d = await prisma.driver.findMany\\({ where:{enabled:true}, orderBy:{number:''asc''}, include:{team:true} }\\); d.forEach\\(x=>console.log\\(x.id, x.number, x.name, x.team.name\\)\\); await prisma.$disconnect\\(\\);\")",
+      "Bash(npx tsx --tsconfig tsconfig.json -e \":*)",
+      "Bash(npx tsx scripts/sync-results.ts)",
+      "Bash(npx tsx scripts/check-china.ts)",
+      "Bash(npx tsx scripts/check-gps.ts)"
+    ]
+  }
+}

@@ -36,10 +36,10 @@ export async function registerUser(prevState: any, formData: FormData) {
 
     await prisma.$transaction(async (tx) => {
       const newUser = await tx.user.create({
-        data: { 
-          name, 
-          username, 
-          email, 
+        data: {
+          name,
+          username,
+          email,
           password: hashedPassword,
           category: codeEntry.category
         },
@@ -47,9 +47,9 @@ export async function registerUser(prevState: any, formData: FormData) {
 
       await tx.inviteCode.update({
         where: { id: codeEntry.id },
-        data: { 
+        data: {
           used: true,
-          userId: newUser.id 
+          userId: newUser.id
         },
       });
     });
@@ -58,7 +58,7 @@ export async function registerUser(prevState: any, formData: FormData) {
     console.error("Erro no registro:", e);
     return { error: "Erro ao processar cadastro.", fields };
   }
-  
+
   redirect("/login");
 }
 
@@ -79,10 +79,12 @@ export async function loginUser(prevState: any, formData: FormData) {
 // --- APOSTA DA CORRIDA (TOP 10 + Dials + Coringa) ---
 
 export async function saveRaceBet(data: {
-  raceId: number;
+  sessionId: number;
+  betId?: number;
   gridIds: number[];
   fastestLapId: number | null;
-  favoriteId: number | null;
+  allInDriverId: number | null;
+  doublePoints: boolean;
   predictedSC: number;
   predictedDNF: number;
 }) {
@@ -94,18 +96,18 @@ export async function saveRaceBet(data: {
   try {
     await prisma.$transaction(async (tx) => {
       let bet = await tx.betRace.findFirst({
-        where: { userId, raceId: data.raceId }
+        where: { userId, sessionId: data.sessionId }
       });
 
       if (bet) {
         await tx.betRace.update({
           where: { id: bet.id },
-          data: { predictedSC: data.predictedSC, predictedDNF: data.predictedDNF }
+          data: { predictedSC: data.predictedSC, predictedDNF: data.predictedDNF, driverId: data.allInDriverId, doublePoints: data.doublePoints }
         });
         await tx.betRaceGridItem.deleteMany({ where: { betId: bet.id } });
       } else {
         bet = await tx.betRace.create({
-          data: { userId, raceId: data.raceId, predictedSC: data.predictedSC, predictedDNF: data.predictedDNF }
+          data: { userId, sessionId: data.sessionId, predictedSC: data.predictedSC, predictedDNF: data.predictedDNF, driverId: data.allInDriverId, doublePoints: data.doublePoints }
         });
       }
 
@@ -114,7 +116,6 @@ export async function saveRaceBet(data: {
         driverId: driverId,
         predictedPosition: index + 1,
         fastestLap: driverId === data.fastestLapId,
-        favorite: driverId === data.favoriteId
       }));
 
       await tx.betRaceGridItem.createMany({ data: gridItems });
@@ -131,7 +132,7 @@ export async function saveRaceBet(data: {
 // --- APOSTA DA SPRINT (TOP 8) ---
 
 export async function saveSprintBet(data: {
-  sprintId: number;
+  sessionId: number;
   gridIds: number[];
 }) {
   const session = await auth();
@@ -142,14 +143,14 @@ export async function saveSprintBet(data: {
   try {
     await prisma.$transaction(async (tx) => {
       let bet = await tx.betSprint.findFirst({
-        where: { userId, sprintId: data.sprintId }
+        where: { userId, sessionId: data.sessionId }
       });
 
       if (bet) {
         await tx.betSprintGridItem.deleteMany({ where: { betId: bet.id } });
       } else {
         bet = await tx.betSprint.create({
-          data: { userId, sprintId: data.sprintId }
+          data: { userId, sessionId: data.sessionId }
         });
       }
 

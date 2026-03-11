@@ -1,0 +1,56 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: admin_f1project
+      POSTGRES_DB: f1-bortobet-db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data_local:/var/lib/postgresql/data
+    restart: always
+
+  web:
+    build: 
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      # URL AJUSTADA: apontando para 'db', com usuário, senha e banco corretos
+      - DATABASE_URL=postgresql://admin:admin_f1project@db:5432/f1-bortobet-db?schema=public
+      - NEXTAUTH_SECRET=minha_chave_secreta_local_123
+      - NEXTAUTH_URL=http://localhost:3000
+    depends_on:
+      - db
+    restart: always
+
+  live-sync:
+    image: node:20-alpine
+    working_dir: /app
+    volumes:
+      - .:/app
+    environment:
+      - DATABASE_URL=postgresql://admin:admin_f1project@db:5432/f1-bortobet-db?schema=public
+    command: sh -c "npm install --silent && npx tsx scripts/sync-live.ts"
+    depends_on:
+      - db
+    restart: always
+
+  cron:
+    image: node:20-alpine
+    working_dir: /app
+    volumes:
+      - .:/app
+    environment:
+      - DATABASE_URL=postgresql://admin:admin_f1project@db:5432/f1-bortobet-db?schema=public
+    command: sh -c "crontab /app/crontab.txt && crond -f -l 8"
+    depends_on:
+      - db
+    restart: always
+
+volumes:
+  postgres_data_local:
