@@ -11,6 +11,9 @@ import { prisma } from './_client';
 const BASE_URL = 'https://api.openf1.org/v1';
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
+const API_KEY = process.env.OPENF1_API_KEY;
+const AUTH_HEADERS: HeadersInit = API_KEY ? { Authorization: `Bearer ${API_KEY}` } : {};
+
 interface OF1Position {
   session_key: number;
   driver_number: number;
@@ -34,7 +37,7 @@ interface OF1RaceControl {
 
 async function fetchJSON<T>(path: string): Promise<T> {
   const url = `${BASE_URL}${path}`;
-  const res = await fetch(url);
+  const res = await fetch(url, { headers: AUTH_HEADERS });
   if (!res.ok) throw new Error(`HTTP ${res.status} em ${url}`);
   return res.json() as Promise<T>;
 }

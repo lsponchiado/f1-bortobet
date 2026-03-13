@@ -17,11 +17,11 @@ export default function RegisterPage() {
 
   return (
     <main className="min-h-screen bg-[#15151e] flex items-center justify-center p-6 text-white font-sans">
-      <div className="w-full max-w-md bg-[#1f1f27] rounded-3xl p-8 border border-gray-800 shadow-2xl relative">
+      <div className="w-full max-w-md bg-[#1f1f27] rounded-3xl p-8 border border-gray-800 shadow-2xl relative overflow-hidden">
         <div className="absolute top-0 left-0 w-full h-1 bg-[#e10600]"></div>
 
         <header className="text-center mb-6">
-          <h1 className="text-[#e10600] text-3xl font-black italic uppercase tracking-tighter">F1 BORT-BET</h1>
+          <h1 className="text-[#e10600] text-3xl font-black italic uppercase tracking-tighter">F1 BORTOBET</h1>
           <p className="text-gray-400 text-[10px] font-bold uppercase tracking-widest mt-1">Crie sua ID de Piloto</p>
         </header>
 
@@ -80,7 +80,7 @@ export default function RegisterPage() {
           </div>
 
           <button type="submit" disabled={isPending} className="w-full bg-[#e10600] hover:bg-[#ff0700] disabled:bg-gray-800 text-white font-black py-4 rounded-xl transition-all uppercase italic mt-4">
-            {isPending ? "Sincronizando..." : "Confirmar Cadastro 🏁"}
+            {isPending ? "Sincronizando..." : "Confirmar Cadastro"}
           </button>
         </form>
       </div>

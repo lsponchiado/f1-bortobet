@@ -9,11 +9,11 @@ export default function LoginPage() {
 
   return (
     <main className="min-h-screen bg-[#15151e] flex items-center justify-center p-6 text-white">
-      <div className="w-full max-w-md bg-[#1f1f27] rounded-3xl p-10 border border-gray-800 shadow-2xl relative">
+      <div className="w-full max-w-md bg-[#1f1f27] rounded-3xl p-10 border border-gray-800 shadow-2xl relative overflow-hidden">
         <div className="absolute top-0 left-0 w-full h-1 bg-[#e10600]"></div>
 
         <header className="text-center mb-8">
-          <h1 className="text-[#e10600] text-4xl font-black italic uppercase tracking-tighter">F1 BORT-BET</h1>
+          <h1 className="text-[#e10600] text-4xl font-black italic uppercase tracking-tighter">F1 BORTOBET</h1>
           <p className="text-gray-400 text-xs mt-2 font-medium uppercase tracking-widest">Acesse seu Paddock</p>
         </header>
 
@@ -46,17 +46,17 @@ export default function LoginPage() {
             />
           </div>
 
-          <button 
-            type="submit" 
+          <button
+            type="submit"
             disabled={isPending}
-            className="w-full bg-[#e10600] hover:bg-[#ff0700] disabled:bg-gray-700 text-white font-black py-4 rounded-xl transition-all uppercase italic text-lg shadow-lg active:scale-95"
+            className="w-full mt-4 bg-[#e10600] hover:bg-[#ff0700] disabled:bg-gray-700 text-white font-black py-4 rounded-xl transition-all uppercase italic text-lg shadow-lg active:scale-95"
           >
-            {isPending ? "Autenticando..." : "Entrar no Grid 🏎️"}
+            {isPending ? "Autenticando..." : "Entrar no Grid"}
           </button>
         </form>
 
         <div className="mt-8 text-center">
-          <Link href="/register" className="text-gray-500 text-xs hover:text-[#e10600] transition-colors">
+          <Link href="/register" className="text-gray-500 text-sm hover:text-[#e10600] transition-colors">
             Não tem uma credencial? <span className="font-bold underline">Solicitar acesso</span>
           </Link>
         </div>

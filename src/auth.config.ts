@@ -15,7 +15,8 @@ export const authConfig = {
     async session({ session, token }) {
       if (session.user) {
         (session.user as any).username = token.username;
-        session.user.id = token.sub || (token.id as string); // Garante que o ID vá para a página
+        (session.user as any).role = token.role;
+        session.user.id = token.sub || (token.id as string);
       }
       return session;
     },

@@ -22,7 +22,6 @@ interface DriverCardProps {
   driver: Driver;
   variant?: DriverCardVariant;
   result?: ResultVariant;
-  hideTeamLogo?: boolean;
 }
 
 const RESULT_STYLES: Record<ResultVariant, { bg: string; border: string }> = {
@@ -41,10 +40,9 @@ function getNameParts(name: string) {
 interface CardVariantProps {
   driver: Driver;
   resultStyles: { bg: string; border: string };
-  hideTeamLogo?: boolean;
 }
 
-function DriverCardCompact({ driver, resultStyles, hideTeamLogo }: CardVariantProps) {
+function DriverCardCompact({ driver, resultStyles }: CardVariantProps) {
   const { code } = getNameParts(driver.name);
 
   return (
@@ -56,13 +54,6 @@ function DriverCardCompact({ driver, resultStyles, hideTeamLogo }: CardVariantPr
       <div className={`relative w-full h-full ${resultStyles.bg} rounded-xl overflow-hidden flex items-center border ${resultStyles.border} px-6 z-10 transition-colors duration-300`}>
         <div className="absolute left-0 top-0 bottom-0 w-2" style={{ backgroundColor: driver.team.color }} />
         <div className="relative w-full flex items-center justify-between gap-4">
-          {!hideTeamLogo && (
-            <div className="flex-shrink-0">
-              {driver.team.logoUrl && (
-                <img src={driver.team.logoUrl} className="h-7 w-auto max-w-[52px] object-contain brightness-0 invert opacity-70" alt={driver.team.name} />
-              )}
-            </div>
-          )}
           <span className="text-2xl font-black italic uppercase tracking-tighter text-white">
             {code}
           </span>
@@ -131,7 +122,7 @@ function DriverCardFull({ driver, resultStyles }: CardVariantProps) {
   );
 }
 
-export function DriverCard({ driver, variant = 'auto', result = 'neutral', hideTeamLogo = false }: DriverCardProps) {
+export function DriverCard({ driver, variant = 'auto', result = 'neutral' }: DriverCardProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [isSquished, setIsSquished] = useState(false);
 
@@ -156,7 +147,7 @@ export function DriverCard({ driver, variant = 'auto', result = 'neutral', hideT
   return (
     <div ref={containerRef} className="w-full">
       {showCompact
-        ? <DriverCardCompact driver={driver} resultStyles={resultStyles} hideTeamLogo={hideTeamLogo} />
+        ? <DriverCardCompact driver={driver} resultStyles={resultStyles} />
         : <DriverCardFull driver={driver} resultStyles={resultStyles} />
       }
     </div>

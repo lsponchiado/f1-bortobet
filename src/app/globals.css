@@ -1,1 +1,6 @@
 @import "tailwindcss";
+
+@keyframes progress {
+  0%   { left: -33%; }
+  100% { left: 100%; }
+}

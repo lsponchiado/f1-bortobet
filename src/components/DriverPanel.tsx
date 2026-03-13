@@ -6,10 +6,9 @@ import { DriverCard } from './DriverCard';
 interface DriverPanelProps {
   drivers: any[];
   onReturnToPaddock?: (gridIndex: number) => void;
-  hideTeamLogo?: boolean;
 }
 
-export function DriverPanel({ drivers, onReturnToPaddock, hideTeamLogo = false }: DriverPanelProps) {
+export function DriverPanel({ drivers, onReturnToPaddock }: DriverPanelProps) {
   const handleDragStart = (e: DragEvent<HTMLElement>, driver: any) => {
     e.dataTransfer.setData('newDriverId', driver.id.toString());
     e.dataTransfer.effectAllowed = 'move';
@@ -34,7 +33,7 @@ export function DriverPanel({ drivers, onReturnToPaddock, hideTeamLogo = false }
 
   return (
     <div
-      className="w-full xl:h-full xl:min-h-[400px] bg-[#0a0a0a] xl:rounded-2xl xl:border border-white/5 p-2 xl:p-6"
+      className="w-full xl:flex-1 xl:flex xl:flex-col xl:overflow-hidden bg-[#1f1f27] rounded-2xl border border-white/5 p-4 xl:p-6"
       onDragOver={handleDragOver}
       onDrop={handleDrop}
     >
@@ -45,16 +44,16 @@ export function DriverPanel({ drivers, onReturnToPaddock, hideTeamLogo = false }
         </span>
       </div>
 
-      <div className="grid grid-rows-2 grid-flow-col xl:grid-rows-none xl:grid-cols-1 xl:grid-flow-row gap-3 overflow-x-auto xl:overflow-x-hidden xl:overflow-y-auto pb-2 xl:pb-0 justify-items-start xl:justify-items-stretch [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+      <div className="grid grid-rows-2 grid-flow-col xl:grid-rows-none xl:grid-cols-2 xl:grid-flow-row gap-3 xl:gap-x-6 xl:gap-y-3 overflow-x-auto xl:overflow-x-hidden xl:overflow-y-auto xl:flex-1 justify-items-start xl:justify-items-stretch [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         {drivers.map((driver) => (
           <div
             key={driver.id}
             draggable
             onDragStart={(e) => handleDragStart(e, driver)}
             onDragEnd={(e) => { e.currentTarget.style.opacity = '1'; }}
-            className="w-[150px] xl:w-[225px] shrink-0 cursor-grab active:cursor-grabbing hover:scale-[1.02] transition-transform"
+            className="w-[150px] xl:w-[200px] shrink-0 cursor-grab active:cursor-grabbing hover:scale-[1.02] transition-transform"
           >
-            <DriverCard driver={driver} variant="compact" hideTeamLogo={hideTeamLogo} />
+            <DriverCard driver={driver} variant="compact" />
           </div>
         ))}
       </div>

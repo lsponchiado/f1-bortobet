@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
+import { Timer } from 'lucide-react';
 import { DriverCard } from './DriverCard';
 import type { ResultVariant } from './DriverCard';
 
@@ -12,11 +13,14 @@ interface GridPanelProps {
   onPlaceNew?: (driverId: string, targetIndex: number) => void;
   interactive?: boolean;
   betResults?: Record<number, ResultVariant>;
-  hideTeamLogo?: boolean;
   gridPositions?: Record<number, number>;
   allowHailMary?: boolean;
   allowUnderdog?: boolean;
   allowFreefall?: boolean;
+  fastestLapDriverId?: number | null;
+  onToggleFastestLap?: (driverId: number) => void;
+  driverPoints?: Record<number, number>;
+  showPositionDelta?: boolean;
 }
 
 type LayoutMode = 'full' | 'compact-zigzag' | 'compact-col';
@@ -29,11 +33,14 @@ export function GridPanel({
   onPlaceNew,
   interactive = true,
   betResults = {},
-  hideTeamLogo = false,
   gridPositions,
   allowHailMary = true,
   allowUnderdog = true,
   allowFreefall = true,
+  fastestLapDriverId,
+  onToggleFastestLap,
+  driverPoints,
+  showPositionDelta = true,
 }: GridPanelProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [layoutMode, setLayoutMode] = useState<LayoutMode>((initialCompact || forceCompact) ? 'compact-col' : 'full');
@@ -54,7 +61,7 @@ export function GridPanel({
     const observer = new ResizeObserver((entries) => {
       const { width } = entries[entries.length - 1].contentRect;
       if (!forceCompact && width >= 1000) setLayoutMode('full');
-      else if (width >= 350) setLayoutMode('compact-zigzag');
+      else if (width >= 280) setLayoutMode('compact-zigzag');
       else setLayoutMode('compact-col');
     });
 
@@ -101,8 +108,8 @@ export function GridPanel({
   };
 
   return (
-    <div ref={containerRef} className="w-full max-w-[1150px] mx-auto pt-4 pb-8 overflow-visible">
-      <div className={`w-full mx-auto flex flex-col transition-all duration-500 ease-in-out ${isFull ? 'max-w-full space-y-3' : (isSingleCol ? 'max-w-full space-y-24' : 'max-w-[584px] space-y-24')}`}>
+    <div ref={containerRef} className="w-full mx-auto p-10 overflow-visible bg-[#1f1f27] rounded-3xl">
+      <div className={`w-full mx-auto flex flex-col transition-all duration-500 ease-in-out ${isFull ? 'max-w-full space-y-1' :(isSingleCol ? 'max-w-full space-y-14' : 'max-w-[688px] space-y-14')}`}>
         {selections.map((driver, idx) => {
           const position = idx + 1;
           const isRight = position % 2 === 0;
@@ -110,7 +117,7 @@ export function GridPanel({
 
           return (
             <div key={position} className={`flex w-full pointer-events-none ${isSingleCol ? 'justify-center' : (isRight ? 'justify-end' : 'justify-start')}`} style={{ zIndex: 50 - idx }}>
-              <div className={`flex flex-col shrink-0 pointer-events-auto transition-all duration-500 ease-in-out ${isCompact ? 'w-[174px]' : 'w-[500px]'}`}>
+              <div className={`flex flex-col shrink-0 pointer-events-auto transition-all duration-500 ease-in-out ${isCompact ? 'w-[226px]' : 'w-[552px]'}`}>
 
                 {/* Status bar */}
                 {(() => {
@@ -124,56 +131,116 @@ export function GridPanel({
                   const underdog = allowUnderdog && qualPos !== null && position <= 3 && (qualPos - position) >= 10;
                   const freefall = allowFreefall && qualPos !== null && (position - qualPos) >= 5;
 
+                  const isFastestLap = !!(driver && fastestLapDriverId === driver.id);
+                  const showFLToggle = !!(driver && onToggleFastestLap);
+                  const showSideBar = showFLToggle || !!(driverPoints && driver);
+
+                  // Result mode FL indicator (non-interactive)
+                  const isPredictedFL = !interactive && driver && fastestLapDriverId === driver.id;
+                  const flHit = isPredictedFL && cardResult === 'purple';
+                  const flBadge = isPredictedFL ? (
+                    <span className={`flex items-center gap-1 text-[10px] font-black px-1.5 py-0.5 rounded border ${flHit ? 'bg-violet-500/20 text-violet-400 border-violet-500/30' : 'bg-red-500/20 text-red-400 border-red-500/30'}`}>
+                      <Timer size={10} strokeWidth={2.5} />
+                      {!isCompact && 'Volta Rápida'}
+                    </span>
+                  ) : null;
+
+                  const flButton = showFLToggle ? (
+                    <button
+                      onClick={() => onToggleFastestLap!(driver.id)}
+                      className={`w-9 h-9 rounded-full flex items-center justify-center transition-all active:scale-90 shrink-0 ${
+                        isFastestLap
+                          ? 'bg-[#7c3aed] text-white shadow-[0_0_10px_2px_rgba(124,58,237,0.5)]'
+                          : 'bg-white/5 text-white/25 hover:bg-white/10 hover:text-white/50'
+                      }`}
+                    >
+                      <Timer size={16} strokeWidth={2.5} />
+                    </button>
+                  ) : null;
+
+                  const hasBadge = hailMary || underdog || freefall || isPredictedFL;
+                  const badges = hasBadge ? (
+                    <div className="flex items-center gap-1.5 mx-2">
+                      {hailMary && <span className="text-[10px] font-black bg-orange-500/20 text-orange-400 border border-orange-500/30 px-1.5 py-0.5 rounded uppercase tracking-wider">{isCompact ? 'HM' : 'Hail Mary'}</span>}
+                      {underdog && <span className="text-[10px] font-black bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 px-1.5 py-0.5 rounded uppercase tracking-wider">{isCompact ? 'UD' : 'Underdog'}</span>}
+                      {freefall && <span className="text-[10px] font-black bg-sky-500/20 text-sky-400 border border-sky-500/30 px-1.5 py-0.5 rounded uppercase tracking-wider">{isCompact ? 'FF' : 'Freefall'}</span>}
+                      {flBadge}
+                    </div>
+                  ) : null;
+
                   const align = isSingleCol ? 'justify-start' : (isRight ? 'justify-end' : 'justify-start');
-                  return (
-                    <div className={`flex items-center gap-2 pb-3 flex-wrap ${align}`}>
-                      {isRight && (
-                        <>
-                          {hailMary && <span className="text-[10px] font-black bg-orange-500/20 text-orange-400 border border-orange-500/30 px-1.5 py-0.5 rounded uppercase tracking-wider">Hail Mary</span>}
-                          {underdog && <span className="text-[10px] font-black bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 px-1.5 py-0.5 rounded uppercase tracking-wider">Underdog</span>}
-                          {freefall && <span className="text-[10px] font-black bg-sky-500/20 text-sky-400 border border-sky-500/30 px-1.5 py-0.5 rounded uppercase tracking-wider">Freefall</span>}
-                          {deltaStr && <span className={`text-xl font-black italic tracking-tighter px-2 ${deltaColor}`}>{deltaStr}</span>}
-                        </>
-                      )}
-                      <span className="text-3xl font-black italic text-white/40 uppercase tracking-tighter">P{position}</span>
-                      {!isRight && (
-                        <>
-                          {deltaStr && <span className={`text-xl font-black italic tracking-tighter px-2 ${deltaColor}`}>{deltaStr}</span>}
-                          {hailMary && <span className="text-[10px] font-black bg-orange-500/20 text-orange-400 border border-orange-500/30 px-1.5 py-0.5 rounded uppercase tracking-wider">Hail Mary</span>}
-                          {underdog && <span className="text-[10px] font-black bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 px-1.5 py-0.5 rounded uppercase tracking-wider">Underdog</span>}
-                          {freefall && <span className="text-[10px] font-black bg-sky-500/20 text-sky-400 border border-sky-500/30 px-1.5 py-0.5 rounded uppercase tracking-wider">Freefall</span>}
-                        </>
-                      )}
+
+                  // Side status bar goes on the right for left-col cards, left for right-col cards
+                  const sideOnLeft = isRight && !isSingleCol;
+
+                  const driverPts = (driverPoints && driver) ? (driverPoints[driver.id] ?? null) : null;
+                  const ptsColor = driverPts !== null && driverPts > 0 ? 'text-emerald-400' : driverPts !== null && driverPts < 0 ? 'text-red-400' : 'text-white/30';
+                  const sideBar = (
+                    <div className={`flex flex-col items-center justify-start w-auto shrink-0 min-w-[60px] ${isCompact ? 'pt-[6px]' : 'pt-[22px]'}`}>
+                      {driverPts !== null ? (
+                        <div className="flex items-baseline gap-1">
+                          <span className={`text-xl font-black tabular-nums leading-none ${ptsColor}`}>
+                            {driverPts > 0 ? '+' : ''}{driverPts}
+                          </span>
+                          <span className={`text-[8px] font-black uppercase tracking-wider ${ptsColor} opacity-60`}>
+                            pts
+                          </span>
+                        </div>
+                      ) : flButton}
                     </div>
                   );
+
+                  return (
+                    <>
+                      <div className={`flex items-center gap-2 pb-3 flex-wrap ${align}`}>
+                        {isRight && (
+                          <>
+                            {badges}
+                            {showPositionDelta && deltaStr && <span className={`text-xl font-black italic tracking-tighter px-2 ${deltaColor}`}>{deltaStr}</span>}
+                          </>
+                        )}
+                        <span className="text-3xl font-black italic text-white/40 uppercase tracking-tighter">P{position}</span>
+                        {!isRight && (
+                          <>
+                            {showPositionDelta && deltaStr && <span className={`text-xl font-black italic tracking-tighter px-2 ${deltaColor}`}>{deltaStr}</span>}
+                            {badges}
+                          </>
+                        )}
+                      </div>
+
+                      <div className={`flex flex-row items-stretch gap-3 w-full ${sideOnLeft ? 'justify-end' : ''}`}>
+                        {showSideBar && sideOnLeft && sideBar}
+                        <div
+                          className={`group relative shrink-0 transition-all duration-500 ease-in-out ${isCompact ? 'w-[174px] p-3 min-h-[94px]' : 'w-[500px] p-6 min-h-[180px]'} border-2 border-transparent ${interactive ? 'hover:border-white/10' : ''} rounded-lg bg-transparent`}
+                          onDragOver={handleDragOver}
+                          onDrop={(e) => handleDrop(e, idx)}
+                        >
+                          <div className="absolute top-0 left-0 right-0 h-[6px] bg-white transition-all duration-500 ease-in-out" />
+                          <div className={`absolute top-0 left-0 w-[6px] transition-all duration-500 ease-in-out ${isCompact ? 'h-12' : 'h-20'} bg-white`} />
+                          <div className={`absolute top-0 right-0 w-[6px] transition-all duration-500 ease-in-out ${isCompact ? 'h-12' : 'h-20'} bg-white`} />
+
+                          <div className={`h-full w-full flex items-center justify-center transition-opacity duration-300 ${!driver ? 'opacity-20' : 'opacity-100'}`}>
+                            {driver ? (
+                              <div
+                                draggable={interactive}
+                                onDragStart={(e) => handleDragStart(e, idx)}
+                                onDragEnd={handleDragEnd}
+                                className={`w-full transition-opacity duration-300 ${interactive ? 'cursor-grab active:cursor-grabbing' : ''} ${draggedIndex === idx ? 'opacity-40' : 'opacity-100'}`}
+                              >
+                                <DriverCard driver={driver} variant={isCompact ? 'compact' : 'full'} result={cardResult} />
+                              </div>
+                            ) : (
+                              <div className={`transition-all duration-500 ease-in-out ${isCompact ? 'h-16' : 'h-32'} w-full flex items-center justify-center`}>
+                                <div className="w-6 h-[2px] bg-white/40 rounded-full" />
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                        {showSideBar && !sideOnLeft && sideBar}
+                      </div>
+                    </>
+                  );
                 })()}
-
-                <div
-                  className={`group relative w-full transition-all duration-500 ease-in-out ${isCompact ? 'p-3 min-h-[94px]' : 'p-6 min-h-[180px]'} border-2 border-transparent ${interactive ? 'hover:border-white/10' : ''} rounded-lg bg-transparent`}
-                  onDragOver={handleDragOver}
-                  onDrop={(e) => handleDrop(e, idx)}
-                >
-                  <div className="absolute top-0 left-0 right-0 h-[6px] bg-white transition-all duration-500 ease-in-out" />
-                  <div className={`absolute top-0 left-0 w-[6px] transition-all duration-500 ease-in-out ${isCompact ? 'h-12' : 'h-20'} bg-white`} />
-                  <div className={`absolute top-0 right-0 w-[6px] transition-all duration-500 ease-in-out ${isCompact ? 'h-12' : 'h-20'} bg-white`} />
-
-                  <div className={`h-full w-full flex items-center justify-center transition-opacity duration-300 ${!driver ? 'opacity-20' : 'opacity-100'}`}>
-                    {driver ? (
-                      <div
-                        draggable={interactive}
-                        onDragStart={(e) => handleDragStart(e, idx)}
-                        onDragEnd={handleDragEnd}
-                        className={`w-full transition-opacity duration-300 ${interactive ? 'cursor-grab active:cursor-grabbing' : ''} ${draggedIndex === idx ? 'opacity-40' : 'opacity-100'}`}
-                      >
-                        <DriverCard driver={driver} variant={isCompact ? 'compact' : 'full'} result={cardResult} hideTeamLogo={isCompact && hideTeamLogo} />
-                      </div>
-                    ) : (
-                      <div className={`transition-all duration-500 ease-in-out ${isCompact ? 'h-16' : 'h-32'} w-full flex items-center justify-center`}>
-                        <div className="w-6 h-[2px] bg-white/40 rounded-full" />
-                      </div>
-                    )}
-                  </div>
-                </div>
 
               </div>
             </div>

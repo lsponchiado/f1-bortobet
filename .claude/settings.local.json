@@ -22,7 +22,12 @@
       "Bash(npx tsx --tsconfig tsconfig.json -e \":*)",
       "Bash(npx tsx scripts/sync-results.ts)",
       "Bash(npx tsx scripts/check-china.ts)",
-      "Bash(npx tsx scripts/check-gps.ts)"
+      "Bash(npx tsx scripts/check-gps.ts)",
+      "Bash(npx tsx:*)",
+      "Bash(grep -l \"_client\" \"c:/Users/lucas/Documents/Dev/f1-project/scripts/\"*.ts)",
+      "Bash(npx prisma:*)",
+      "WebFetch(domain:openf1.org)",
+      "WebFetch(domain:github.com)"
     ]
   }
 }

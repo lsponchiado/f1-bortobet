@@ -32,8 +32,18 @@ const SESSION_LABELS: Record<SessionType, string> = {
   PRACTICE_1: 'Treino Livre 1',
   PRACTICE_2: 'Treino Livre 2',
   PRACTICE_3: 'Treino Livre 3',
-  SPRINT_QUALIFYING: 'Sprint Quali',
+  SPRINT_QUALIFYING: 'Classificação Sprint',
   QUALIFYING: 'Classificação',
+  SPRINT: 'Sprint',
+  RACE: 'Corrida',
+};
+
+const SESSION_LABELS_SHORT: Record<SessionType, string> = {
+  PRACTICE_1: 'TL 1',
+  PRACTICE_2: 'TL 2',
+  PRACTICE_3: 'TL 3',
+  SPRINT_QUALIFYING: 'Spr. class.',
+  QUALIFYING: 'Class.',
   SPRINT: 'Sprint',
   RACE: 'Corrida',
 };
@@ -113,7 +123,7 @@ export function GpPanel({
     const minute = parts.find((p) => p.type === 'minute')?.value;
     const tz = parts.find((p) => p.type === 'timeZoneName')?.value;
 
-    return `${day}/${month}, ${hour}:${minute} (${tz})`;
+    return `${day}/${month}, ${hour}:${minute}`;
   };
 
   const sortedSessions = [...sessions].sort(
@@ -127,7 +137,7 @@ export function GpPanel({
         {/* Header em largura total */}
         <header>
           <div className="flex items-center gap-5">
-            <h2 className="text-4xl font-black italic uppercase tracking-tighter text-white leading-none whitespace-nowrap">
+            <h2 className="text-4xl font-black italic uppercase tracking-tighter text-white leading-none">
               {eventName}
             </h2>
             <img
@@ -144,52 +154,54 @@ export function GpPanel({
         {/* Duas colunas: sessões+botões | mapa */}
         <div className="flex flex-col md:flex-row gap-14 items-end">
           <div className="flex-1 space-y-6">
-            <div className="grid grid-cols-1 gap-3 py-4 border-y border-white/5">
+            <div className="flex flex-col gap-3 py-4 border-y border-white/5">
+
             {sortedSessions.map((s) => {
               const past = !s.cancelled && s.date < now;
               return (
-                <div key={s.type} className={`flex justify-between items-center ${past ? 'opacity-40' : ''}`}>
+                <div key={s.type} className={`grid grid-cols-2 items-start gap-4 ${past ? 'opacity-40' : ''}`}>
                   <span className="text-[#e10600] text-xl font-black italic uppercase tracking-tight">
-                    {SESSION_LABELS[s.type]}
+                    <span className="md:hidden">{SESSION_LABELS_SHORT[s.type]}</span>
+                    <span className="hidden md:inline">{SESSION_LABELS[s.type]}</span>
                   </span>
                   {s.cancelled ? (
-                    <span className="text-gray-500 text-xl font-black italic uppercase tracking-tight">
+                    <div className="text-gray-500 text-xl font-black italic uppercase tracking-tight text-right">
                       Cancelada
-                    </span>
+                    </div>
                   ) : (
-                    <span className={`text-white font-mono text-xl font-bold ${past ? 'line-through' : ''}`}>
+                    <div className={`text-white font-mono text-xl font-bold text-right ${past ? 'line-through' : ''}`}>
                       {formatDate(s.date)}
-                    </span>
+                    </div>
                   )}
                 </div>
               );
             })}
           </div>
 
-          <div className="grid grid-cols-3 gap-3 pt-2">
-            <div className="space-y-2">
+          <div className="grid grid-cols-3 gap-3 pt-2 items-stretch">
+            <div className="flex flex-col gap-2">
               <span className="text-[9px] font-black text-gray-500 uppercase tracking-widest block text-center">Sprint Race</span>
               <button
                 onClick={() => router.push(`/bet/${seasonId}/${gpId}/sprint`)}
                 disabled={sprintStatus.disabled}
-                className={`w-full py-4 rounded-xl font-black italic uppercase text-sm transition-all active:scale-95 shadow-lg ${sprintStatus.color}`}
+                className={`w-full flex-1 py-4 rounded-xl font-black italic uppercase text-sm transition-all active:scale-95 shadow-lg ${sprintStatus.color}`}
               >
                 {sprintStatus.text}
               </button>
             </div>
 
-            <div className="space-y-2">
+            <div className="flex flex-col gap-2">
               <span className="text-[9px] font-black text-gray-500 uppercase tracking-widest block text-center">Grand Prix</span>
               <button
                 onClick={() => router.push(`/bet/${seasonId}/${gpId}/race`)}
                 disabled={raceStatus.disabled}
-                className={`w-full py-4 rounded-xl font-black italic uppercase text-sm transition-all active:scale-95 shadow-lg ${raceStatus.color}`}
+                className={`w-full flex-1 py-4 rounded-xl font-black italic uppercase text-sm transition-all active:scale-95 shadow-lg ${raceStatus.color}`}
               >
                 {raceStatus.text}
               </button>
             </div>
 
-            <div className="space-y-2">
+            <div className="flex flex-col gap-2">
               <span className="text-[9px] font-black text-gray-500 uppercase tracking-widest block text-center">Resultados</span>
               {(() => {
                 const anyPast = sessions.some((s) => !s.cancelled && new Date(s.date) < now);
@@ -197,13 +209,13 @@ export function GpPanel({
                   <button
                     onClick={() => anyPast && router.push(`/results/${seasonId}/${gpId}`)}
                     disabled={!anyPast}
-                    className={`w-full py-4 rounded-xl font-black italic uppercase text-sm transition-all shadow-lg ${
+                    className={`w-full flex-1 py-4 rounded-xl font-black italic uppercase text-sm transition-all shadow-lg ${
                       anyPast
                         ? 'active:scale-95 bg-[#e10600] hover:bg-[#ff0700] text-white'
                         : 'bg-gray-800 text-gray-500 cursor-not-allowed'
                     }`}
                   >
-                    {anyPast ? 'VER RESULTADOS' : 'INDISPONÍVEL'}
+                    {anyPast ? <><span className="md:hidden">VER RESULT.</span><span className="hidden md:inline">VER RESULTADOS</span></> : <><span className="md:hidden">INDISP.</span><span className="hidden md:inline">INDISPONÍVEL</span></>}
                   </button>
                 );
               })()}
@@ -211,7 +223,8 @@ export function GpPanel({
           </div>
           </div>
 
-          <div className="w-full md:w-80 md:aspect-square flex items-center justify-center bg-black/20 rounded-2xl p-6 border border-white/5 relative group flex-shrink-0">
+          {/* Map: desktop only, right column */}
+          <div className="hidden md:flex w-80 aspect-square items-center justify-center bg-black/20 rounded-2xl p-6 border border-white/5 relative group flex-shrink-0">
             <img
               src={trackMapUrl}
               alt={trackName}

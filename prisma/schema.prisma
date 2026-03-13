@@ -6,6 +6,11 @@ datasource db {
   provider = "postgresql"
 }
 
+enum Role {
+  USER
+  ADMIN
+}
+
 enum SessionType {
   PRACTICE_1
   PRACTICE_2
@@ -49,6 +54,7 @@ model User {
   username   String      @unique
   password   String
   name       String
+  role       Role        @default(USER)
   category   String      @default("Haas")
   betRaces   BetRace[]
   betSprints BetSprint[]
@@ -56,11 +62,51 @@ model User {
 }
 
 model Season {
-  id          Int       @id @default(autoincrement())
-  year        Int       @unique
-  isActive    Boolean   @default(true)
+  id          Int          @id @default(autoincrement())
+  year        Int          @unique
+  isActive    Boolean      @default(true)
   description String?
   sessions    Session[]
+  config      SeasonConfig?
+}
+
+model SeasonConfig {
+  id               Int    @id @default(autoincrement())
+  seasonId         Int    @unique
+  season           Season @relation(fields: [seasonId], references: [id])
+
+  // Pontuação por posição (Top 10)
+  ptsP1            Int  @default(25)
+  ptsP2            Int  @default(18)
+  ptsP3            Int  @default(15)
+  ptsP4            Int  @default(12)
+  ptsP5            Int  @default(10)
+  ptsP6            Int  @default(8)
+  ptsP7            Int  @default(6)
+  ptsP8            Int  @default(4)
+  ptsP9            Int  @default(2)
+  ptsP10           Int  @default(1)
+
+  // Mecânicas de bônus
+  ptsHailMary      Int  @default(25)
+  ptsUnderdog      Int  @default(10)
+  ptsFreefall      Int  @default(5)
+  ptsFastestLap    Int  @default(10)
+  ptsSafetyCar     Int  @default(10)
+  ptsDNF           Int  @default(10)
+
+  // Pontuação da Sprint (Top 8)
+  sprintPtsP1      Int  @default(8)
+  sprintPtsP2      Int  @default(7)
+  sprintPtsP3      Int  @default(6)
+  sprintPtsP4      Int  @default(5)
+  sprintPtsP5      Int  @default(4)
+  sprintPtsP6      Int  @default(3)
+  sprintPtsP7      Int  @default(2)
+  sprintPtsP8      Int  @default(1)
+
+  // Tokens de double points
+  doublePointsTokens Int  @default(3)
 }
 
 model GrandPrix {

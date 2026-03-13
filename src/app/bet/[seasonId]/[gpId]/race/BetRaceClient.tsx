@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { GridPanel } from '@/components/GridPanel';
 import { DriverPanel } from '@/components/DriverPanel';
 import { DriverCard } from '@/components/DriverCard';
-import { Minus, Plus } from 'lucide-react';
+import { Minus, Plus, Users } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { saveRaceBet } from '@/lib/actions';
 
@@ -34,6 +34,7 @@ interface BetRaceClientProps {
 export default function BetRaceClient({ drivers, sessionId, initialBet, doublePointsTokensUsed, allowDoublePoints, allowHailMary, allowUnderdog, allowFreefall, gridPositions }: BetRaceClientProps) {
   const router = useRouter();
   const [isSaving, setIsSaving] = useState(false);
+  const [paddockOpen, setPaddockOpen] = useState(false);
 
   const [isLargeScreen, setIsLargeScreen] = useState(false);
   useEffect(() => {
@@ -99,7 +100,7 @@ export default function BetRaceClient({ drivers, sessionId, initialBet, doublePo
 
 
   const handleDial = (setter: (value: number) => void, current: number, delta: number) => {
-    setter(Math.max(0, Math.min(8, current + delta)));
+    setter(Math.max(0, Math.min(3, current + delta)));
   };
 
   const handleAllInDrop = (e: React.DragEvent) => {
@@ -147,29 +148,41 @@ export default function BetRaceClient({ drivers, sessionId, initialBet, doublePo
   };
 
   return (
-    <main className="flex flex-col xl:flex-row flex-1 overflow-hidden p-4 gap-4 xl:gap-8">
-      <section className="hidden xl:block xl:w-[273px] xl:flex-shrink-0 xl:overflow-y-auto xl:pr-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-        <DriverPanel drivers={availableDrivers} onReturnToPaddock={handleReturnToPaddock} />
-      </section>
+    <main className="flex flex-col flex-1 overflow-hidden">
+      {/* ── Header ── */}
+      <div className="shrink-0 flex items-center justify-end px-4 pt-4 pb-3">
+        <button
+          onClick={() => setPaddockOpen(p => !p)}
+          className="xl:hidden flex items-center gap-2 bg-[#1f1f27] border border-white/10 rounded-xl px-3 py-2 text-xs font-black uppercase text-gray-400 active:bg-white/10 transition-colors"
+        >
+          <Users className="w-4 h-4" />
+          Paddock
+          {availableDrivers.length > 0 && (
+            <span className="bg-[#e10600] text-white text-[10px] font-black w-4 h-4 rounded-full flex items-center justify-center">
+              {availableDrivers.length}
+            </span>
+          )}
+        </button>
+      </div>
 
-      <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
-        <div className="xl:hidden shrink-0 bg-[#050505] py-2">
-          <DriverPanel drivers={availableDrivers} onReturnToPaddock={handleReturnToPaddock} hideTeamLogo={true} />
-        </div>
+      {/* ── Body ── */}
+      <div className="flex flex-1 min-h-0 overflow-hidden gap-4 xl:gap-8 px-4 pb-4">
+        {/* Desktop sidebar */}
+        <aside className="hidden xl:flex xl:flex-col xl:w-[472px] xl:flex-shrink-0 xl:h-full xl:overflow-hidden xl:pr-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          <DriverPanel drivers={availableDrivers} onReturnToPaddock={handleReturnToPaddock} />
+        </aside>
 
-        <section className="flex-1 overflow-y-auto overflow-x-hidden flex flex-col items-center min-h-0 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-          <div className="w-full max-w-[1100px]">
+        {/* Content column */}
+        <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
+          {/* Mobile paddock panel */}
+          {paddockOpen && (
+            <div className="xl:hidden shrink-0 overflow-y-auto max-h-[40vh] mb-2 [scrollbar-width:thin]">
+              <DriverPanel drivers={availableDrivers} onReturnToPaddock={handleReturnToPaddock} />
+            </div>
+          )}
 
-            <div>
-              <div className="flex flex-col items-center justify-center mb-10 mt-6 gap-2">
-                <h1 className="text-2xl font-black italic uppercase tracking-tighter text-white">
-                  {initialBet ? 'Editar Aposta' : 'Aposta da Corrida'}
-                </h1>
-                <p className="text-[#e10600] text-xs font-bold uppercase tracking-widest">
-                  Arraste os pilotos para os boxes
-                </p>
-              </div>
-
+          <section className="flex-1 overflow-y-auto overflow-x-hidden flex flex-col items-center min-h-0 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+            <div className="w-full max-w-[1200px] mx-auto">
               <div className="relative">
                 <GridPanel
                   selections={grid}
@@ -177,11 +190,14 @@ export default function BetRaceClient({ drivers, sessionId, initialBet, doublePo
                   forceCompact={!isLargeScreen}
                   onPlaceNew={handlePlaceNew}
                   onSwap={handleSwap}
-                  hideTeamLogo={!isLargeScreen}
                   gridPositions={gridPositions}
                   allowHailMary={allowHailMary}
                   allowUnderdog={allowUnderdog}
                   allowFreefall={allowFreefall}
+                  fastestLapDriverId={fastestLapDriverId}
+                  onToggleFastestLap={(driverId) =>
+                    setFastestLapDriverId((prev) => (prev === driverId ? null : driverId))
+                  }
                 />
               </div>
             </div>
@@ -197,7 +213,7 @@ export default function BetRaceClient({ drivers, sessionId, initialBet, doublePo
                     <button onClick={() => handleDial(setPredictedSC, predictedSC, -1)} className="p-3 text-gray-500 hover:text-white transition-colors">
                       <Minus size={20} strokeWidth={3} />
                     </button>
-                    <span className="text-3xl font-black text-[#e10600] w-8 text-center">{predictedSC}</span>
+                    <span className="text-3xl font-black text-[#e10600] w-8 text-center">{predictedSC >= 3 ? '3+' : predictedSC}</span>
                     <button onClick={() => handleDial(setPredictedSC, predictedSC, 1)} className="p-3 text-gray-500 hover:text-white transition-colors">
                       <Plus size={20} strokeWidth={3} />
                     </button>
@@ -212,7 +228,7 @@ export default function BetRaceClient({ drivers, sessionId, initialBet, doublePo
                     <button onClick={() => handleDial(setPredictedDNF, predictedDNF, -1)} className="p-3 text-gray-500 hover:text-white transition-colors">
                       <Minus size={20} strokeWidth={3} />
                     </button>
-                    <span className="text-3xl font-black text-[#e10600] w-8 text-center">{predictedDNF}</span>
+                    <span className="text-3xl font-black text-[#e10600] w-8 text-center">{predictedDNF >= 3 ? '3+' : predictedDNF}</span>
                     <button onClick={() => handleDial(setPredictedDNF, predictedDNF, 1)} className="p-3 text-gray-500 hover:text-white transition-colors">
                       <Plus size={20} strokeWidth={3} />
                     </button>
@@ -272,7 +288,12 @@ export default function BetRaceClient({ drivers, sessionId, initialBet, doublePo
               <h3 className="text-sm font-black uppercase tracking-widest text-gray-500 mb-6 text-center">Resumo do Grid</h3>
               <div className="grid grid-cols-1 xl:grid-cols-2 gap-x-12 gap-y-2">
                 {grid.map((driver, idx) => {
+                  const position = idx + 1;
                   const isFL = driver && driver.id === fastestLapDriverId;
+                  const qualPos = driver ? (gridPositions[driver.id] ?? null) : null;
+                  const hailMary = allowHailMary && qualPos !== null && qualPos >= 20 && position <= 5;
+                  const underdog = allowUnderdog && qualPos !== null && position <= 3 && (qualPos - position) >= 10;
+                  const freefall = allowFreefall && qualPos !== null && (position - qualPos) >= 5;
                   return (
                     <div key={idx} className="flex items-center text-base border-b border-white/10 py-3">
                       <div className="flex items-center gap-3 w-full">
@@ -280,8 +301,11 @@ export default function BetRaceClient({ drivers, sessionId, initialBet, doublePo
                         <span className="text-white/90 font-bold uppercase tracking-wide truncate">
                           {driver ? driver.name : '---'}
                         </span>
-                        <div className="flex gap-2 items-center shrink-0">
-                          {isFL && <span className="text-[#9333ea] text-xl leading-none drop-shadow-[0_0_8px_rgba(147,51,234,0.8)]" title="Volta Rápida">⏱</span>}
+                        <div className="flex gap-2 items-center shrink-0 ml-auto">
+                          {hailMary && <span className="text-[10px] font-black bg-orange-500/20 text-orange-400 border border-orange-500/30 px-1.5 py-0.5 rounded uppercase tracking-wider">Hail Mary</span>}
+                          {underdog && <span className="text-[10px] font-black bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 px-1.5 py-0.5 rounded uppercase tracking-wider">Underdog</span>}
+                          {freefall && <span className="text-[10px] font-black bg-sky-500/20 text-sky-400 border border-sky-500/30 px-1.5 py-0.5 rounded uppercase tracking-wider">Freefall</span>}
+                          {isFL && <span className="text-[10px] font-black bg-violet-500/20 text-violet-400 border border-violet-500/30 px-1.5 py-0.5 rounded uppercase tracking-wider">Volta Rápida</span>}
                         </div>
                       </div>
                     </div>
@@ -301,11 +325,10 @@ export default function BetRaceClient({ drivers, sessionId, initialBet, doublePo
               </button>
             </div>
 
+            </div>
+            </section>
           </div>
-
         </div>
-        </section>
-      </div>
     </main>
   );
 }

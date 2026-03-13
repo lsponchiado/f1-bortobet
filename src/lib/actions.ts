@@ -21,11 +21,6 @@ export async function registerUser(prevState: any, formData: FormData) {
   try {
     if (password !== confirmPassword) return { error: "As senhas não coincidem.", fields };
 
-    const codeEntry = await prisma.inviteCode.findUnique({ where: { code: inviteCode } });
-    if (!codeEntry || codeEntry.used) {
-      return { error: "Código de convite inválido ou já utilizado.", fields };
-    }
-
     const userExists = await prisma.user.findFirst({ where: { OR: [{ email }, { username }] } });
     if (userExists) {
       const msg = userExists.email === email ? "E-mail já cadastrado." : "Este username já está em uso.";
@@ -34,32 +29,36 @@ export async function registerUser(prevState: any, formData: FormData) {
 
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    await prisma.$transaction(async (tx) => {
-      const newUser = await tx.user.create({
-        data: {
-          name,
-          username,
-          email,
-          password: hashedPassword,
-          category: codeEntry.category
-        },
+    // Master access code: cria admin sem consumir invite do banco
+    const masterCode = process.env.MASTER_ACCESS_CODE;
+    if (masterCode && inviteCode === masterCode) {
+      await prisma.user.create({
+        data: { name, username, email, password: hashedPassword, role: 'ADMIN' },
       });
+    } else {
+      const codeEntry = await prisma.inviteCode.findUnique({ where: { code: inviteCode } });
+      if (!codeEntry || codeEntry.used) {
+        return { error: "Código de convite inválido ou já utilizado.", fields };
+      }
 
-      await tx.inviteCode.update({
-        where: { id: codeEntry.id },
-        data: {
-          used: true,
-          userId: newUser.id
-        },
+      await prisma.$transaction(async (tx) => {
+        const newUser = await tx.user.create({
+          data: { name, username, email, password: hashedPassword, category: codeEntry.category },
+        });
+        await tx.inviteCode.update({
+          where: { id: codeEntry.id },
+          data: { used: true, userId: newUser.id },
+        });
       });
-    });
+    }
 
   } catch (e) {
     console.error("Erro no registro:", e);
     return { error: "Erro ao processar cadastro.", fields };
   }
 
-  redirect("/login");
+  await signIn("credentials", { identifier: email, password, redirect: false });
+  redirect("/");
 }
 
 export async function loginUser(prevState: any, formData: FormData) {
@@ -74,6 +73,55 @@ export async function loginUser(prevState: any, formData: FormData) {
     return { error: "Credenciais inválidas. Verifique seu usuário/e-mail e senha." };
   }
   redirect("/");
+}
+
+// --- PERFIL ---
+
+async function getAuthUserId(): Promise<number> {
+  const session = await auth();
+  if (!session?.user?.id) redirect('/login');
+  return parseInt(session.user.id, 10);
+}
+
+export async function updateName(name: string) {
+  const userId = await getAuthUserId();
+  if (!name.trim()) return { error: 'Nome não pode ser vazio.' };
+  await prisma.user.update({ where: { id: userId }, data: { name: name.trim() } });
+  revalidatePath('/perfil');
+  return { success: true };
+}
+
+export async function updateEmail(email: string) {
+  const userId = await getAuthUserId();
+  if (!email.trim()) return { error: 'E-mail não pode ser vazio.' };
+  const exists = await prisma.user.findFirst({ where: { email, NOT: { id: userId } } });
+  if (exists) return { error: 'E-mail já está em uso.' };
+  await prisma.user.update({ where: { id: userId }, data: { email: email.trim() } });
+  revalidatePath('/perfil');
+  return { success: true };
+}
+
+export async function updateUsername(username: string) {
+  const userId = await getAuthUserId();
+  if (!username.trim()) return { error: 'Username não pode ser vazio.' };
+  const exists = await prisma.user.findFirst({ where: { username, NOT: { id: userId } } });
+  if (exists) return { error: 'Username já está em uso.' };
+  await prisma.user.update({ where: { id: userId }, data: { username: username.trim() } });
+  revalidatePath('/perfil');
+  return { success: true };
+}
+
+export async function updatePassword(currentPassword: string, newPassword: string, confirmPassword: string) {
+  const userId = await getAuthUserId();
+  if (newPassword !== confirmPassword) return { error: 'As senhas não coincidem.' };
+  if (newPassword.length < 6) return { error: 'A nova senha deve ter pelo menos 6 caracteres.' };
+  const user = await prisma.user.findUnique({ where: { id: userId } });
+  if (!user) return { error: 'Usuário não encontrado.' };
+  const valid = await bcrypt.compare(currentPassword, user.password);
+  if (!valid) return { error: 'Senha atual incorreta.' };
+  const hashed = await bcrypt.hash(newPassword, 10);
+  await prisma.user.update({ where: { id: userId }, data: { password: hashed } });
+  return { success: true };
 }
 
 // --- APOSTA DA CORRIDA (TOP 10 + Dials + Coringa) ---

@@ -75,28 +75,41 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
 
   return (
     <div className="min-h-screen bg-[#050505]">
-      <Navbar username={displayUsername} />
-      <main className="pt-32 p-6 lg:p-12 flex flex-col items-center">
+      <Navbar username={displayUsername} isAdmin={(session.user as any).role === 'ADMIN'} />
+      <main className="pt-6 p-6 pb-40 md:pb-6 lg:p-12 flex flex-col items-center">
         <div className="w-full max-w-5xl space-y-12">
-          <div className="px-2">
+          <div className="px-2 flex items-center justify-between">
             <h2 className="text-white/20 text-4xl font-black italic uppercase tracking-tighter">
               {heading}
             </h2>
+            <div className="flex gap-2 shrink-0">
+              <Link
+                href={prevRound ? `/?round=${prevRound}` : '#'}
+                aria-disabled={!prevRound}
+                className={`w-12 h-12 md:w-14 md:h-14 rounded-full flex items-center justify-center border transition-all ${
+                  prevRound
+                    ? 'border-white/20 text-white hover:border-white/60 hover:bg-white/10 active:scale-95'
+                    : 'border-white/5 text-white/20 pointer-events-none'
+                }`}
+              >
+                <ChevronLeft size={24} />
+              </Link>
+              <Link
+                href={nextRound ? `/?round=${nextRound}` : '#'}
+                aria-disabled={!nextRound}
+                className={`w-12 h-12 md:w-14 md:h-14 rounded-full flex items-center justify-center border transition-all ${
+                  nextRound
+                    ? 'border-white/20 text-white hover:border-white/60 hover:bg-white/10 active:scale-95'
+                    : 'border-white/5 text-white/20 pointer-events-none'
+                }`}
+              >
+                <ChevronRight size={24} />
+              </Link>
+            </div>
           </div>
-          <div className="relative">
-            <Link
-              href={prevRound ? `/?round=${prevRound}` : '#'}
-              aria-disabled={!prevRound}
-              className={`absolute left-0 top-1/2 -translate-y-1/2 -translate-x-16 w-12 h-12 rounded-full flex items-center justify-center border transition-all
-                ${prevRound
-                  ? 'border-white/20 text-white hover:border-white/60 hover:bg-white/10 active:scale-95'
-                  : 'border-white/5 text-white/20 pointer-events-none'}`}
-            >
-              <ChevronLeft size={24} />
-            </Link>
 
-            <div>
-              <GpPanel
+          <div>
+            <GpPanel
                 eventName={raceSession.grandPrix.name}
                 trackName={raceSession.grandPrix.trackName}
                 country={raceSession.grandPrix.country}
@@ -112,18 +125,6 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
                 gpId={raceSession.grandPrixId}
               />
             </div>
-
-            <Link
-              href={nextRound ? `/?round=${nextRound}` : '#'}
-              aria-disabled={!nextRound}
-              className={`absolute right-0 top-1/2 -translate-y-1/2 translate-x-16 w-12 h-12 rounded-full flex items-center justify-center border transition-all
-                ${nextRound
-                  ? 'border-white/20 text-white hover:border-white/60 hover:bg-white/10 active:scale-95'
-                  : 'border-white/5 text-white/20 pointer-events-none'}`}
-            >
-              <ChevronRight size={24} />
-            </Link>
-          </div>
         </div>
       </main>
     </div>

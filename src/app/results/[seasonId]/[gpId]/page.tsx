@@ -95,7 +95,7 @@ export default async function ResultsPage({
 
   return (
     <div className="min-h-screen bg-[#050505] text-white">
-      <Navbar username={displayUsername} />
+      <Navbar username={displayUsername} isAdmin={(session.user as any).role === 'ADMIN'} />
       <ResultsClient sessions={sessionInfos} fallbackDrivers={fallbackDrivers} gpName={grandPrix.name} />
     </div>
   );
