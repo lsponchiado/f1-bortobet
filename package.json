@@ -29,7 +29,10 @@
     "pg": "^8.20.0",
     "react": "19.2.3",
     "react-dom": "19.2.3",
-    "zod": "^4.3.6"
+    "zod": "^4.3.6",
+    "prisma": "^7.4.2",
+    "tsx": "^4.7.1",
+    "typescript": "^5"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.2.1",
@@ -43,8 +46,9 @@
     "eslint-config-next": "16.1.6",
     "mqtt": "^5.15.0",
     "postcss": "^8.5.8",
-    "prisma": "^7.4.2",
-    "tailwindcss": "^4.2.1",
-    "typescript": "^5"
+    "tailwindcss": "^4.2.1"
+  },
+  "prisma": {
+    "seed": "npx tsx scripts/seed-test.ts"
   }
 }
