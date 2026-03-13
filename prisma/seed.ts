@@ -26,6 +26,7 @@ async function main() {
     }
   });
   console.log('✅ Temporada 2026 criada');
+  //teste
 
   // 2. Geração de Convites
   console.log('🎲 Gerando lotes de convites...');
