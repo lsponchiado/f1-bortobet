@@ -50,11 +50,10 @@ interface ResultadosClientProps {
 function entryToRowData(entry: SessionEntry, position: number): GridRowData {
   let variant: CardVariant = 'default';
 
-  if (entry.dnf || entry.dns || entry.dsq) variant = 'red';
-  else if (entry.fastestLap) variant = 'purple';
+  if (entry.fastestLap) variant = 'purple';
 
-  const isClassified = !entry.dnf && !entry.dns && !entry.dsq;
-  const delta = isClassified ? entry.startPosition - entry.finishPosition : undefined;
+  const delta: number | string | undefined = entry.dns ? 'DNS' : entry.dsq ? 'DSQ' : entry.dnf ? 'DNF'
+    : entry.startPosition - entry.finishPosition;
 
   return {
     position,
