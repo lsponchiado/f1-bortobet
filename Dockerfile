@@ -22,6 +22,7 @@ COPY --from=builder /app/.next/standalone ./
 
 # --- A SOLUÇÃO RÁPIDA PARA HOJE ---
 # Copia todas as dependências originais para os scripts rodarem via terminal
+
 COPY --from=builder /app/node_modules ./node_modules
 # ----------------------------------
 

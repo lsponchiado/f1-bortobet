@@ -119,9 +119,6 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
                   date: s.date,
                   cancelled: s.cancelled,
                 }))}
-                hasRaceBet={raceSession.betRaces.length > 0}
-                hasSprintBet={!!userSprintBet}
-                seasonId={seasonId}
                 gpId={raceSession.grandPrixId}
               />
             </div>

@@ -22,9 +22,6 @@ interface GpPanelProps {
   country: string;
   trackMapUrl: string;
   sessions: SessionInfo[];
-  hasRaceBet: boolean;
-  hasSprintBet: boolean;
-  seasonId: number;
   gpId: number;
 }
 
@@ -58,53 +55,16 @@ const SESSION_ORDER: SessionType[] = [
   'RACE',
 ];
 
-type ButtonStatus = {
-  text: string;
-  disabled: boolean;
-  color: string;
-};
-
 export function GpPanel({
   eventName,
   trackName,
   country,
   trackMapUrl,
   sessions,
-  hasRaceBet,
-  hasSprintBet,
-  seasonId,
   gpId,
 }: GpPanelProps) {
   const router = useRouter();
   const now = new Date();
-
-  const raceSession = sessions.find((s) => s.type === 'RACE');
-  const sprintSession = sessions.find((s) => s.type === 'SPRINT');
-
-  const getButtonStatus = (
-    session: SessionInfo | undefined,
-    hasBet: boolean,
-    label: string
-  ): ButtonStatus => {
-    if (!session || session.cancelled) {
-      return { text: `SEM ${label.toUpperCase()}`, disabled: true, color: 'bg-gray-800 text-gray-500' };
-    }
-
-    const lockTime = new Date(session.date.getTime() - 5 * 60 * 1000);
-    const isLocked = now >= lockTime;
-
-    if (isLocked) {
-      if (!hasBet) return { text: 'SEM APOSTAS', disabled: true, color: 'bg-gray-800 text-gray-500' };
-      return { text: 'VISUALIZAR APOSTA', disabled: false, color: 'bg-[#e10600] hover:bg-[#ff0700] text-white' };
-    }
-    if (hasBet) {
-      return { text: 'EDITAR APOSTA', disabled: false, color: 'bg-white text-black hover:bg-gray-200' };
-    }
-    return { text: 'CRIAR APOSTA', disabled: false, color: 'bg-[#e10600] hover:bg-[#ff0700] text-white' };
-  };
-
-  const raceStatus = getButtonStatus(raceSession, hasRaceBet, 'CORRIDA');
-  const sprintStatus = getButtonStatus(sprintSession, hasSprintBet, 'SPRINT');
 
   const formatDate = (date: Date) => {
     const formatter = new Intl.DateTimeFormat('pt-BR', {
@@ -178,48 +138,30 @@ export function GpPanel({
             })}
           </div>
 
-          <div className="grid grid-cols-3 gap-3 pt-2 items-stretch">
-            <div className="flex flex-col gap-2">
-              <span className="text-[9px] font-black text-gray-500 uppercase tracking-widest block text-center">Sprint Race</span>
-              <button
-                onClick={() => router.push(`/bet/${seasonId}/${gpId}/sprint`)}
-                disabled={sprintStatus.disabled}
-                className={`w-full flex-1 py-4 rounded-xl font-black italic uppercase text-sm transition-all active:scale-95 shadow-lg ${sprintStatus.color}`}
-              >
-                {sprintStatus.text}
-              </button>
-            </div>
+          <div className="grid grid-cols-2 gap-3 pt-2 items-stretch">
+            <button
+              onClick={() => router.push(`/apostas/${gpId}`)}
+              className="w-full py-4 rounded-xl font-black italic uppercase text-sm transition-all active:scale-95 shadow-lg bg-white text-black hover:bg-gray-200"
+            >
+              Apostas
+            </button>
 
-            <div className="flex flex-col gap-2">
-              <span className="text-[9px] font-black text-gray-500 uppercase tracking-widest block text-center">Grand Prix</span>
-              <button
-                onClick={() => router.push(`/bet/${seasonId}/${gpId}/race`)}
-                disabled={raceStatus.disabled}
-                className={`w-full flex-1 py-4 rounded-xl font-black italic uppercase text-sm transition-all active:scale-95 shadow-lg ${raceStatus.color}`}
-              >
-                {raceStatus.text}
-              </button>
-            </div>
-
-            <div className="flex flex-col gap-2">
-              <span className="text-[9px] font-black text-gray-500 uppercase tracking-widest block text-center">Resultados</span>
-              {(() => {
-                const anyPast = sessions.some((s) => !s.cancelled && new Date(s.date) < now);
-                return (
-                  <button
-                    onClick={() => anyPast && router.push(`/results/${seasonId}/${gpId}`)}
-                    disabled={!anyPast}
-                    className={`w-full flex-1 py-4 rounded-xl font-black italic uppercase text-sm transition-all shadow-lg ${
-                      anyPast
-                        ? 'active:scale-95 bg-[#e10600] hover:bg-[#ff0700] text-white'
-                        : 'bg-gray-800 text-gray-500 cursor-not-allowed'
-                    }`}
-                  >
-                    {anyPast ? <><span className="md:hidden">VER RESULT.</span><span className="hidden md:inline">VER RESULTADOS</span></> : <><span className="md:hidden">INDISP.</span><span className="hidden md:inline">INDISPONÍVEL</span></>}
-                  </button>
-                );
-              })()}
-            </div>
+            {(() => {
+              const anyPast = sessions.some((s) => !s.cancelled && new Date(s.date) < now);
+              return (
+                <button
+                  onClick={() => anyPast && router.push(`/resultados/${gpId}`)}
+                  disabled={!anyPast}
+                  className={`w-full py-4 rounded-xl font-black italic uppercase text-sm transition-all shadow-lg ${
+                    anyPast
+                      ? 'active:scale-95 bg-[#e10600] hover:bg-[#ff0700] text-white'
+                      : 'bg-gray-800 text-gray-500 cursor-not-allowed'
+                  }`}
+                >
+                  Resultados
+                </button>
+              );
+            })()}
           </div>
           </div>
 

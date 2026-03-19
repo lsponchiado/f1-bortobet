@@ -135,11 +135,13 @@ export async function saveRaceBet(data: {
   doublePoints: boolean;
   predictedSC: number;
   predictedDNF: number;
+  targetUserId?: number;
 }) {
   const session = await auth();
   if (!session?.user?.id) throw new Error("Não autorizado");
 
-  const userId = parseInt(session.user.id, 10);
+  const isAdmin = (session.user as any).role === 'ADMIN';
+  const userId = isAdmin && data.targetUserId ? data.targetUserId : parseInt(session.user.id, 10);
 
   try {
     await prisma.$transaction(async (tx) => {
@@ -182,11 +184,13 @@ export async function saveRaceBet(data: {
 export async function saveSprintBet(data: {
   sessionId: number;
   gridIds: number[];
+  targetUserId?: number;
 }) {
   const session = await auth();
   if (!session?.user?.id) throw new Error("Não autorizado");
 
-  const userId = parseInt(session.user.id, 10);
+  const isAdmin = (session.user as any).role === 'ADMIN';
+  const userId = isAdmin && data.targetUserId ? data.targetUserId : parseInt(session.user.id, 10);
 
   try {
     await prisma.$transaction(async (tx) => {

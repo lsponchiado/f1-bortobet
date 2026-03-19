@@ -310,7 +310,104 @@ type ConfigData = {
   raceSessions: RaceSession[];
 };
 
-export function AdminClient({ configData }: { configData: ConfigData }) {
+function BypassToggle({ storageKey, title, description }: { storageKey: string; title: string; description: string }) {
+  const [active, setActive] = useState(() => {
+    if (typeof window === 'undefined') return false;
+    return sessionStorage.getItem(storageKey) === 'true';
+  });
+
+  const handleToggle = (value: boolean) => {
+    setActive(value);
+    sessionStorage.setItem(storageKey, String(value));
+    if (!value && storageKey === 'betUserBypass') {
+      sessionStorage.removeItem('betUserBypassId');
+    }
+  };
+
+  return (
+    <div className="bg-[#1f1f27] rounded-3xl border border-white/5 overflow-hidden shadow-xl">
+      <div className={`h-1 w-full transition-colors duration-500 ${active ? 'bg-yellow-500' : 'bg-[#e10600]'}`} />
+      <div className="p-5 flex items-center justify-between gap-4">
+        <div className="flex items-center gap-4">
+          <div className="w-10 h-10 rounded-2xl bg-white/5 flex items-center justify-center shrink-0">
+            <Settings className="w-5 h-5 text-yellow-500" />
+          </div>
+          <div>
+            <h3 className="font-black uppercase italic tracking-tight text-white">{title}</h3>
+            <p className="text-gray-500 text-xs font-bold mt-0.5">{description}</p>
+          </div>
+        </div>
+        <Toggle value={active} onChange={handleToggle} />
+      </div>
+    </div>
+  );
+}
+
+type UserOption = { id: number; username: string | null; name: string | null };
+
+function UserBypassPanel({ users }: { users: UserOption[] }) {
+  const [active, setActive] = useState(() => {
+    if (typeof window === 'undefined') return false;
+    return sessionStorage.getItem('betUserBypass') === 'true';
+  });
+  const [selectedId, setSelectedId] = useState<number | null>(() => {
+    if (typeof window === 'undefined') return null;
+    const stored = sessionStorage.getItem('betUserBypassId');
+    return stored ? parseInt(stored, 10) : null;
+  });
+
+  const handleToggle = (value: boolean) => {
+    setActive(value);
+    sessionStorage.setItem('betUserBypass', String(value));
+    if (!value) {
+      setSelectedId(null);
+      sessionStorage.removeItem('betUserBypassId');
+    }
+  };
+
+  const handleUserChange = (id: number | null) => {
+    setSelectedId(id);
+    if (id) {
+      sessionStorage.setItem('betUserBypassId', String(id));
+    } else {
+      sessionStorage.removeItem('betUserBypassId');
+    }
+  };
+
+  return (
+    <div className="bg-[#1f1f27] rounded-3xl border border-white/5 overflow-hidden shadow-xl">
+      <div className={`h-1 w-full transition-colors duration-500 ${active ? 'bg-yellow-500' : 'bg-[#e10600]'}`} />
+      <div className="p-5 flex flex-col gap-4">
+        <div className="flex items-center justify-between gap-4">
+          <div className="flex items-center gap-4">
+            <div className="w-10 h-10 rounded-2xl bg-white/5 flex items-center justify-center shrink-0">
+              <Users className="w-5 h-5 text-yellow-500" />
+            </div>
+            <div>
+              <h3 className="font-black uppercase italic tracking-tight text-white">Bypass de Usuário</h3>
+              <p className="text-gray-500 text-xs font-bold mt-0.5">Permite apostar em nome de outro usuário (apenas nesta sessão do navegador)</p>
+            </div>
+          </div>
+          <Toggle value={active} onChange={handleToggle} />
+        </div>
+        {active && (
+          <select
+            value={selectedId ?? ''}
+            onChange={e => handleUserChange(e.target.value ? parseInt(e.target.value, 10) : null)}
+            className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-sm font-bold text-white focus:outline-none focus:border-yellow-500/60 cursor-pointer appearance-none"
+          >
+            <option value="">Selecione um usuário...</option>
+            {users.map(u => (
+              <option key={u.id} value={u.id}>{u.username || u.name || `User ${u.id}`}</option>
+            ))}
+          </select>
+        )}
+      </div>
+    </div>
+  );
+}
+
+export function AdminClient({ configData, allUsers }: { configData: ConfigData; allUsers: UserOption[] }) {
   return (
     <div className="flex flex-col gap-4">
       <div className="grid grid-cols-1 gap-4">
@@ -318,6 +415,8 @@ export function AdminClient({ configData }: { configData: ConfigData }) {
         <SyncCard title="Resultados" description="Importa posições finais, fastest lap, SC e DNF de sessões passadas"        icon={Flag}      onSync={syncResults}  />
         <SyncCard title="OpenF1"     description="Sincroniza pilotos, equipes, GPs e sessões da temporada atual"             icon={RefreshCw} onSync={syncOpenF1}   />
       </div>
+      <BypassToggle storageKey="betLockBypass" title="Bypass Temporal" description="Permite apostas a qualquer momento (apenas nesta sessão do navegador)" />
+      <UserBypassPanel users={allUsers} />
       <SeasonConfigPanel initialConfig={configData.season?.config ?? null} />
       <RoundConfigPanel  raceSessions={configData.raceSessions} />
     </div>

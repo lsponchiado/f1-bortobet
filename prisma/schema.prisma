@@ -1,5 +1,6 @@
 generator client {
   provider = "prisma-client-js"
+  previewFeatures = ["views"]
 }
 
 datasource db {
@@ -23,7 +24,8 @@ enum SessionType {
 
 model Driver {
   id                 Int                @id @default(autoincrement())
-  name               String             @unique
+  firstName          String             @default("")
+  lastName           String             @default("")
   code               String             @unique @db.Char(3)
   number             Int                @unique
   enabled            Boolean            @default(true)
@@ -56,9 +58,11 @@ model User {
   name       String
   role       Role        @default(USER)
   category   String      @default("Haas")
-  betRaces   BetRace[]
-  betSprints BetSprint[]
-  inviteCode InviteCode?
+  betRaces          BetRace[]
+  betSprints        BetSprint[]
+  betRaceResults    BetRaceResult[]
+  betSprintResults  BetSprintResult[]
+  inviteCode        InviteCode?
 }
 
 model Season {
@@ -131,9 +135,11 @@ model Session {
   grandPrix   GrandPrix   @relation(fields: [grandPrixId], references: [id])
   raceConfig  RaceConfig?
   entries     SessionEntry[]
-  betRaces    BetRace[]
-  betSprints  BetSprint[]
-  scCount     Int         @default(0)
+  betRaces          BetRace[]
+  betSprints        BetSprint[]
+  betRaceResults    BetRaceResult[]
+  betSprintResults  BetSprintResult[]
+  scCount           Int         @default(0)
   vscCount    Int         @default(0)
 
   @@unique([seasonId, grandPrixId, type])
@@ -186,6 +192,7 @@ model BetRace {
   user          User              @relation(fields: [userId], references: [id])
   session       Session           @relation(fields: [sessionId], references: [id])
   predictedGrid BetRaceGridItem[]
+  result        BetRaceResult?
 }
 
 model BetSprint {
@@ -196,6 +203,7 @@ model BetSprint {
   user          User                @relation(fields: [userId], references: [id])
   session       Session             @relation(fields: [sessionId], references: [id])
   predictedGrid BetSprintGridItem[]
+  result        BetSprintResult?
 }
 
 model BetRaceGridItem {
@@ -219,6 +227,46 @@ model BetSprintGridItem {
   driver            Driver    @relation(fields: [driverId], references: [id])
 
   @@unique([betId, predictedPosition])
+}
+
+/// Postgres VIEW – não gerenciada pelo Prisma Migrate
+view BetRaceResult {
+  id         Int   @unique
+  betId      Int
+  userId     Int
+  sessionId  Int
+  somaPos    Int[] /// pontos por posição (índice 0 = P1). 0 = errou, >0 = acertou
+  hailMary   Int[] /// pontos de hail mary por posição. 0 = sem badge, >0 = badge
+  underdog   Int[] /// pontos de underdog por posição. 0 = sem badge, >0 = badge
+  freefall   Int[] /// pontos de freefall por posição. 0 = sem badge, >0 = badge
+  fastestLap Int   @default(0)
+  safetyCar  Int   @default(0)
+  abandonos  Int   @default(0)
+  somaTotal  Int   @default(0)
+
+  bet     BetRace @relation(fields: [betId], references: [id])
+  user    User    @relation(fields: [userId], references: [id])
+  session Session @relation(fields: [sessionId], references: [id])
+
+  @@unique([betId])
+  @@map("bet_race_results_view")
+}
+
+/// Postgres VIEW – não gerenciada pelo Prisma Migrate
+view BetSprintResult {
+  id        Int   @unique
+  betId     Int
+  userId    Int
+  sessionId Int
+  somaPos   Int[] /// pontos por posição (índice 0 = P1). 0 = errou, >0 = acertou
+  somaTotal Int   @default(0)
+
+  bet     BetSprint @relation(fields: [betId], references: [id])
+  user    User      @relation(fields: [userId], references: [id])
+  session Session   @relation(fields: [sessionId], references: [id])
+
+  @@unique([betId])
+  @@map("bet_sprint_results_view")
 }
 
 model InviteCode {

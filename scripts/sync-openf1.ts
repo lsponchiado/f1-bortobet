@@ -33,6 +33,8 @@ interface OF1Session {
 
 interface OF1Driver {
   driver_number: number;
+  first_name: string;
+  last_name: string;
   full_name: string;
   name_acronym: string;
   team_name: string;
@@ -265,13 +267,15 @@ async function main() {
         await prisma.driver.upsert({
           where: { code: d.name_acronym },
           update: {
-            name: d.full_name,
+            firstName: d.first_name,
+            lastName: d.last_name,
             number: d.driver_number,
             headshotUrl,
             teamId: team.id,
           },
           create: {
-            name: d.full_name,
+            firstName: d.first_name,
+            lastName: d.last_name,
             code: d.name_acronym,
             number: d.driver_number,
             country,
