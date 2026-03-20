@@ -39,7 +39,7 @@ export function BetExtrasPanel({
       if (!groups[team]) groups[team] = [];
       groups[team].push(d);
     }
-    return Object.entries(groups);
+    return Object.entries(groups).sort(([a], [b]) => a.localeCompare(b));
   }, [allDrivers]);
 
   return (

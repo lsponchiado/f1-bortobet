@@ -59,7 +59,15 @@
       "Bash(find /c/Users/lucas/Documents/Dev/f1-project/src/app/apostas/[sessionId] -type f)",
       "Bash(grep -r \"5.*minute\\\\|getTime\\\\|Date\\\\.now\\\\|beforeSessionTime\" /c/Users/lucas/Documents/Dev/f1-project/src --include=*.ts --include=*.tsx)",
       "Bash(grep -r \"before\\\\|lock\\\\|5.*minute\\\\|restrict\\\\|cannot\\\\|disabled\\\\|readonly\" /c/Users/lucas/Documents/Dev/f1-project/src/lib --include=*.ts --include=*.tsx -i)",
-      "Bash(grep -r \"session.*date\\\\|betted\\\\|locked\" /c/Users/lucas/Documents/Dev/f1-project/src/lib /c/Users/lucas/Documents/Dev/f1-project/src/app --include=*.ts --include=*.tsx -C 2)"
+      "Bash(grep -r \"session.*date\\\\|betted\\\\|locked\" /c/Users/lucas/Documents/Dev/f1-project/src/lib /c/Users/lucas/Documents/Dev/f1-project/src/app --include=*.ts --include=*.tsx -C 2)",
+      "Bash(psql postgresql://lsponchiado@localhost:5432/f1-bortobet -c \"\\\\dv bet_*\")",
+      "Bash(ls -la node_modules/.prisma/client/*.d.ts)",
+      "Bash(git -C /Users/lsponchiado/Documents/Dev/f1-bortobet ls-files scripts/)",
+      "Bash(git -C /Users/lsponchiado/Documents/Dev/f1-bortobet rm -r scripts/)",
+      "Bash(git -C /Users/lsponchiado/Documents/Dev/f1-bortobet ls-files crontab.txt)",
+      "Bash(git -C /Users/lsponchiado/Documents/Dev/f1-bortobet rm crontab.txt)",
+      "Bash(git -C /Users/lsponchiado/Documents/Dev/f1-bortobet ls-files '*.bak')",
+      "Bash(git -C /Users/lsponchiado/Documents/Dev/f1-bortobet rm src/app/admin/AdminClient.tsx.bak)"
     ]
   }
 }

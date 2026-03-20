@@ -40,6 +40,10 @@ export async function registerUser(prevState: any, formData: FormData) {
       if (!codeEntry || codeEntry.used) {
         return { error: "Código de convite inválido ou já utilizado.", fields };
       }
+      const ageMs = Date.now() - codeEntry.createdAt.getTime();
+      if (ageMs > 7 * 24 * 60 * 60 * 1000) {
+        return { error: "Código de convite expirado.", fields };
+      }
 
       await prisma.$transaction(async (tx) => {
         const newUser = await tx.user.create({
@@ -131,7 +135,6 @@ export async function saveRaceBet(data: {
   betId?: number;
   gridIds: number[];
   fastestLapId: number | null;
-  allInDriverId: number | null;
   doublePoints: boolean;
   predictedSC: number;
   predictedDNF: number;
@@ -140,7 +143,7 @@ export async function saveRaceBet(data: {
   const session = await auth();
   if (!session?.user?.id) throw new Error("Não autorizado");
 
-  const isAdmin = (session.user as any).role === 'ADMIN';
+  const isAdmin = session.user.role === 'ADMIN';
   const userId = isAdmin && data.targetUserId ? data.targetUserId : parseInt(session.user.id, 10);
 
   try {
@@ -152,12 +155,12 @@ export async function saveRaceBet(data: {
       if (bet) {
         await tx.betRace.update({
           where: { id: bet.id },
-          data: { predictedSC: data.predictedSC, predictedDNF: data.predictedDNF, driverId: data.allInDriverId, doublePoints: data.doublePoints }
+          data: { predictedSC: data.predictedSC, predictedDNF: data.predictedDNF, driverId: null, doublePoints: data.doublePoints }
         });
         await tx.betRaceGridItem.deleteMany({ where: { betId: bet.id } });
       } else {
         bet = await tx.betRace.create({
-          data: { userId, sessionId: data.sessionId, predictedSC: data.predictedSC, predictedDNF: data.predictedDNF, driverId: data.allInDriverId, doublePoints: data.doublePoints }
+          data: { userId, sessionId: data.sessionId, predictedSC: data.predictedSC, predictedDNF: data.predictedDNF, driverId: null, doublePoints: data.doublePoints }
         });
       }
 
@@ -189,7 +192,7 @@ export async function saveSprintBet(data: {
   const session = await auth();
   if (!session?.user?.id) throw new Error("Não autorizado");
 
-  const isAdmin = (session.user as any).role === 'ADMIN';
+  const isAdmin = session.user.role === 'ADMIN';
   const userId = isAdmin && data.targetUserId ? data.targetUserId : parseInt(session.user.id, 10);
 
   try {

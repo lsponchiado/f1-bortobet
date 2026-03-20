@@ -49,7 +49,7 @@ export function GridDropdown({
           ❌ Limpar Posição
         </option>
 
-        {Object.entries(groupedDrivers).map(([team, drivers]) => (
+        {Object.entries(groupedDrivers).sort(([a], [b]) => a.localeCompare(b)).map(([team, drivers]) => (
           <optgroup key={team} label={team}>
             {drivers.map(d => (
               <option key={d.id} value={d.id}>{d.lastName}</option>

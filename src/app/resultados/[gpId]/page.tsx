@@ -18,26 +18,20 @@ export default async function ResultadosPage({ params }: { params: Promise<{ gpI
   const gp = await prisma.grandPrix.findUnique({ where: { id: gpId } });
   if (!gp) redirect('/');
 
-  // All GPs that have sessions in the active season (for the GP selector)
-  const allGps = await prisma.grandPrix.findMany({
-    where: { sessions: { some: { seasonId: activeSeason.id } } },
-    orderBy: { sessions: { _count: 'desc' } },
-    select: { id: true, name: true, country: true },
-  });
-
-  // Order GPs by their earliest session date
-  const gpsWithDate = await Promise.all(
-    allGps.map(async (g) => {
-      const firstSession = await prisma.session.findFirst({
-        where: { grandPrixId: g.id, seasonId: activeSeason.id },
-        orderBy: { date: 'asc' },
-        select: { date: true },
-      });
-      return { ...g, firstDate: firstSession?.date ?? new Date() };
-    })
-  );
-  gpsWithDate.sort((a, b) => a.firstDate.getTime() - b.firstDate.getTime());
-  const serializedGps = gpsWithDate.map(g => ({ id: g.id, name: g.name, country: g.country }));
+  // All GPs with results, ordered by earliest session date (single query)
+  const serializedGps = await prisma.$queryRaw<{ id: number; name: string; country: string }[]>`
+    SELECT gp.id, gp.name, gp.country
+    FROM "GrandPrix" gp
+    WHERE EXISTS (
+      SELECT 1 FROM "Session" s
+      JOIN "SessionEntry" se ON se."sessionId" = s.id
+      WHERE s."grandPrixId" = gp.id AND s."seasonId" = ${activeSeason.id}
+    )
+    ORDER BY (
+      SELECT MIN(s.date) FROM "Session" s
+      WHERE s."grandPrixId" = gp.id AND s."seasonId" = ${activeSeason.id}
+    ) ASC
+  `;
 
   const sessions = await prisma.session.findMany({
     where: { grandPrixId: gpId, seasonId: activeSeason.id },
@@ -79,11 +73,11 @@ export default async function ResultadosPage({ params }: { params: Promise<{ gpI
     })),
   }));
 
-  const displayUsername = (session.user as any).username || session.user.name || 'User';
+  const displayUsername = session.user.username || session.user.name || 'User';
 
   return (
     <div className="min-h-screen bg-[#050505]">
-      <Navbar username={displayUsername} isAdmin={(session.user as any).role === 'ADMIN'} />
+      <Navbar username={displayUsername} isAdmin={session.user.role === 'ADMIN'} />
       <main className="pt-6 p-6 pb-40 md:pb-6 lg:p-12 flex flex-col items-center">
         <div className="w-full max-w-400 space-y-8">
           <ResultadosClient

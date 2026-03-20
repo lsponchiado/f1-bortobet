@@ -28,29 +28,6 @@ services:
       - db
     restart: always
 
-  live-sync:
-    image: node:20-alpine
-    working_dir: /app
-    volumes:
-      - .:/app
-    environment:
-      - DATABASE_URL=postgresql://admin:admin_f1project@db:5432/f1-bortobet-db?schema=public
-    command: sh -c "npm install --silent && npx tsx scripts/sync-live.ts"
-    depends_on:
-      - db
-    restart: always
-
-  cron:
-    image: node:20-alpine
-    working_dir: /app
-    volumes:
-      - .:/app
-    environment:
-      - DATABASE_URL=postgresql://admin:admin_f1project@db:5432/f1-bortobet-db?schema=public
-    command: sh -c "crontab /app/crontab.txt && crond -f -l 8"
-    depends_on:
-      - db
-    restart: always
 
 volumes:
   postgres_data_local:

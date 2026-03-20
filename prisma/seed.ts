@@ -31,8 +31,8 @@ async function main() {
   // 2. Geração de Convites
   console.log('🎲 Gerando lotes de convites...');
   const batches = [
-    { category: "Haas", count: 20 },
-    { category: "Lance Stroll", count: 20 }
+    { category: "HAAS" as const, count: 20 },
+    { category: "STROLL" as const, count: 20 }
   ];
 
   for (const batch of batches) {

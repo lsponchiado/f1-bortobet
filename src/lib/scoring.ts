@@ -131,7 +131,6 @@ async function _calculateScores(filters: ScoringFilters): Promise<ScoringResult>
           where: { sessionId: { in: raceSessionIds }, ...userFilter },
           select: {
             userId: true, sessionId: true,
-            driverId: true,       // all-in driver
             doublePoints: true,
             predictedSC: true, predictedDNF: true,
             predictedGrid: { select: { driverId: true, predictedPosition: true, fastestLap: true } },
@@ -231,20 +230,6 @@ async function _calculateScores(filters: ScoringFilters): Promise<ScoringResult>
       const actual = dnfCountBySession.get(bet.sessionId) ?? 0;
       const dnfMatch = bet.predictedDNF >= 3 ? actual >= 3 : bet.predictedDNF === actual;
       if (dnfMatch) pts_ += pts.dnf;
-    }
-
-    // All-In
-    if (rc?.allowAllIn !== false && bet.driverId) {
-      const entry = entryMap.get(`${bet.sessionId}:${bet.driverId}`);
-      if (entry) {
-        if (entry.dnf) {
-          pts_ -= 17; // max penalty (-12) + extra (-5)
-        } else if (entry.finishPosition <= 10) {
-          pts_ += pts.race[entry.finishPosition] ?? 0;
-        } else {
-          pts_ -= (entry.finishPosition - 10); // P11=-1 … P22=-12
-        }
-      }
     }
 
     // Double Points (doubles the entire race total for this round)

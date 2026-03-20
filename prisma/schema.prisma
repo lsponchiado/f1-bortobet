@@ -22,6 +22,12 @@ enum SessionType {
   RACE
 }
 
+enum Category {
+  STROLL
+  HAAS
+  HULKENBERG
+}
+
 model Driver {
   id                 Int                @id @default(autoincrement())
   firstName          String             @default("")
@@ -36,7 +42,6 @@ model Driver {
   sessionEntries     SessionEntry[]
   betRaceGridItems   BetRaceGridItem[]
   betSprintGridItems BetSprintGridItem[]
-  allInBets          BetRace[]          @relation("AllInDriver")
 }
 
 model Team {
@@ -57,7 +62,7 @@ model User {
   password   String
   name       String
   role       Role        @default(USER)
-  category   String      @default("Haas")
+  category   Category    @default(HAAS)
   betRaces          BetRace[]
   betSprints        BetSprint[]
   betRaceResults    BetRaceResult[]
@@ -111,6 +116,23 @@ model SeasonConfig {
 
   // Tokens de double points
   doublePointsTokens Int  @default(3)
+
+  // Prêmios STROLL
+  potStroll        Int  @default(800)   // valor pago por cada participante STROLL
+  pctGps           Int  @default(75)    // % do pot total destinado aos GPs
+  pctFinal         Int  @default(25)    // % do pot total destinado ao prêmio final
+
+  // Distribuição por GP (P1/P2/P3, devem somar 100)
+  gpPctP1          Int  @default(50)
+  gpPctP2          Int  @default(30)
+  gpPctP3          Int  @default(20)
+
+  // Distribuição final da temporada (P1-P5, devem somar 100)
+  finalPctP1       Int  @default(35)
+  finalPctP2       Int  @default(25)
+  finalPctP3       Int  @default(20)
+  finalPctP4       Int  @default(12)
+  finalPctP5       Int  @default(8)
 }
 
 model GrandPrix {
@@ -119,6 +141,7 @@ model GrandPrix {
   country     String
   trackName   String
   trackMapUrl String?
+  cancelled   Boolean   @default(false)
   sessions    Session[]
 }
 
@@ -143,6 +166,7 @@ model Session {
   vscCount    Int         @default(0)
 
   @@unique([seasonId, grandPrixId, type])
+  @@index([seasonId, grandPrixId])
 }
 
 model RaceConfig {
@@ -152,7 +176,6 @@ model RaceConfig {
   allowHailMary     Boolean @default(true)
   allowUnderdog     Boolean @default(true)
   allowFreefall     Boolean @default(true)
-  allowAllIn        Boolean @default(true)
   allowSafetyCar    Boolean @default(true)
   allowDNF          Boolean @default(true)
   allowFastestLap   Boolean @default(true)
@@ -177,6 +200,7 @@ model SessionEntry {
   team           Team    @relation(fields: [teamId], references: [id])
 
   @@unique([sessionId, driverId])
+  @@index([sessionId])
 }
 
 model BetRace {
@@ -185,7 +209,6 @@ model BetRace {
   sessionId     Int
   driverId      Int?
   doublePoints  Boolean           @default(false)
-  allInDriver   Driver?           @relation("AllInDriver", fields: [driverId], references: [id])
   predictedSC   Int               @default(0)
   predictedDNF  Int               @default(0)
   createdAt     DateTime          @default(now())
@@ -193,6 +216,8 @@ model BetRace {
   session       Session           @relation(fields: [sessionId], references: [id])
   predictedGrid BetRaceGridItem[]
   result        BetRaceResult?
+
+  @@index([userId, sessionId])
 }
 
 model BetSprint {
@@ -204,6 +229,8 @@ model BetSprint {
   session       Session             @relation(fields: [sessionId], references: [id])
   predictedGrid BetSprintGridItem[]
   result        BetSprintResult?
+
+  @@index([userId, sessionId])
 }
 
 model BetRaceGridItem {
@@ -274,7 +301,7 @@ model InviteCode {
   userId    Int?     @unique
   code      String   @unique
   used      Boolean  @default(false)
-  category  String   @default("Haas")
+  category  Category @default(HAAS)
   createdAt DateTime @default(now())
   user      User?    @relation(fields: [userId], references: [id])
 }

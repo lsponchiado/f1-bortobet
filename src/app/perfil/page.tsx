@@ -16,11 +16,11 @@ export default async function PerfilPage() {
 
   if (!user) redirect('/login');
 
-  const displayUsername = (session.user as any).username || session.user.name || 'User';
+  const displayUsername = session.user.username || session.user.name || 'User';
 
   return (
     <div className="min-h-screen bg-[#050505]">
-      <Navbar username={displayUsername} isAdmin={(session.user as any).role === 'ADMIN'} />
+      <Navbar username={displayUsername} isAdmin={session.user.role === 'ADMIN'} />
       <main className="pt-6 pb-40 md:pb-12 px-6 lg:px-12 flex flex-col items-center">
         <div className="w-full max-w-2xl">
           <ProfileClient name={user.name} email={user.email} username={user.username} />

@@ -1,8 +1,0 @@
-# Sync paddock — a cada hora, verifica pilotos nas próximas 24h
-0 * * * * cd /app && npx tsx scripts/sync-paddock.ts 24 >> /var/log/paddock-sync.log 2>&1
-
-# Sync status/horários das sessões — 1x por dia às 07:00 UTC (somente sessões futuras)
-0 7 * * * cd /app && npx tsx scripts/sync-sessions.ts 14 >> /var/log/sessions-sync.log 2>&1
-
-# Sync calendário completo (GPs, sessões, pilotos) — toda segunda às 06:00 UTC
-0 6 * * 1 cd /app && npx tsx scripts/sync-openf1.ts 2026 >> /var/log/openf1-sync.log 2>&1

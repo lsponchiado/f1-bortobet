@@ -6,11 +6,11 @@ export default async function RegrasPage() {
   const session = await auth();
   if (!session?.user?.id) redirect('/login');
 
-  const displayUsername = (session.user as any).username || session.user.name || 'User';
+  const displayUsername = session.user.username || session.user.name || 'User';
 
   return (
     <div className="min-h-screen bg-[#050505]">
-      <Navbar username={displayUsername} isAdmin={(session.user as any).role === 'ADMIN'} />
+      <Navbar username={displayUsername} isAdmin={session.user.role === 'ADMIN'} />
       <main className="pt-6 pb-40 md:pb-12 px-6 lg:px-12 flex flex-col items-center">
         <div className="w-full max-w-3xl space-y-8">
 
@@ -148,50 +148,6 @@ export default async function RegrasPage() {
             </div>
           </section>
 
-          {/* All-In */}
-          <section className="bg-[#1f1f27] rounded-3xl border border-white/5 overflow-hidden">
-            <div className="h-1 w-full bg-[#e10600]" />
-            <div className="p-6 md:p-8 space-y-5">
-              <div>
-                <h2 className="text-xl font-black italic uppercase tracking-tight text-white">
-                  Modo All-In
-                </h2>
-                <p className="text-[#e10600] text-xs font-bold uppercase tracking-widest mt-0.5">
-                  Opcional · Risco Máximo
-                </p>
-                <p className="text-gray-400 text-sm mt-2 italic">
-                  Você escolhe <span className="text-white font-bold not-italic">UM piloto</span> entre os 12 que sobraram (fora do seu Top 10 apostado).
-                </p>
-              </div>
-
-              <div className="space-y-3">
-                <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-xl p-4">
-                  <p className="text-emerald-400 font-bold text-sm">Se terminar no Top 10</p>
-                  <p className="text-gray-300 text-sm mt-1">
-                    Você ganha a pontuação oficial da F1.
-                  </p>
-                  <p className="text-gray-500 text-xs mt-1">Ex: P1 = +25 pts, P10 = +1 pt</p>
-                </div>
-
-                <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-4">
-                  <p className="text-red-400 font-bold text-sm">Se terminar abaixo (P11 a P22)</p>
-                  <p className="text-gray-300 text-sm mt-1">
-                    Você perde pontos na escala direta: <span className="font-bold text-white">(10 − Posição)</span>.
-                  </p>
-                  <p className="text-gray-500 text-xs mt-1">P11 = −1 | P15 = −5 | P22 = −12</p>
-                </div>
-
-                <div className="bg-red-900/20 border border-red-900/40 rounded-xl p-4">
-                  <p className="text-red-500 font-bold text-sm">DNF (Abandono)</p>
-                  <p className="text-gray-300 text-sm mt-1">
-                    Perda máxima da escala (−12) + penalidade de −5.
-                  </p>
-                  <p className="text-gray-500 text-xs mt-1">Total: −17 pontos</p>
-                </div>
-              </div>
-            </div>
-          </section>
-
           {/* Double Points */}
           <section className="bg-[#1f1f27] rounded-3xl border border-white/5 overflow-hidden">
             <div className="h-1 w-full bg-[#e10600]" />
@@ -212,7 +168,7 @@ export default async function RegrasPage() {
                 <div className="flex gap-3 items-start">
                   <span className="shrink-0 w-2 h-2 rounded-full bg-[#e10600] mt-2" />
                   <p className="text-gray-300 text-sm">
-                    O token <span className="text-white font-bold">dobra o valor total</span> obtido na rodada, incluindo todos os bônus e o All-In.
+                    O token <span className="text-white font-bold">dobra o valor total</span> obtido na rodada, incluindo todos os bônus.
                   </p>
                 </div>
               </div>

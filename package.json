@@ -6,14 +6,7 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint",
-    "sync:f1": "npx tsx scripts/sync-openf1.ts",
-    "sync:paddock": "npx tsx scripts/sync-paddock.ts",
-    "sync:live": "npx tsx scripts/sync-live.ts",
-    "sync:results": "npx tsx scripts/sync-results.ts",
-    "sync:sessions": "npx tsx scripts/sync-sessions.ts",
-    "seed:china-quali": "npx tsx scripts/seed-china-quali.ts",
-    "seed:test": "npx tsx scripts/seed-test.ts"
+    "lint": "eslint"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
@@ -23,6 +16,7 @@
     "@prisma/client": "^7.4.2",
     "bcryptjs": "^3.0.3",
     "dotenv": "^17.3.1",
+    "html-to-image": "^1.11.13",
     "i18n-iso-countries": "^7.14.0",
     "lucide-react": "^0.577.0",
     "next": "16.1.6",
@@ -50,6 +44,6 @@
     "tailwindcss": "^4.2.1"
   },
   "prisma": {
-    "seed": "npx tsx scripts/seed-test.ts"
+    "seed": "npx tsx prisma/seed.ts"
   }
 }

@@ -9,8 +9,8 @@ export default async function ApostasPage({ params, searchParams }: { params: Pr
   if (!session?.user?.id) redirect('/login');
 
   const loggedInUserId = parseInt(session.user.id, 10);
-  const isAdmin = (session.user as any).role === 'ADMIN';
-  const displayUsername = (session.user as any).username || session.user.name || 'User';
+  const isAdmin = session.user.role === 'ADMIN';
+  const displayUsername = session.user.username || session.user.name || 'User';
 
   const { gpId: gpIdStr } = await params;
   const gpId = parseInt(gpIdStr, 10);
@@ -84,7 +84,7 @@ export default async function ApostasPage({ params, searchParams }: { params: Pr
         grid: bet.predictedGrid.map(g => ({
           position: g.predictedPosition,
           driverId: g.driver.id,
-          lastName: (g.driver as any).lastName ?? g.driver.name,
+          lastName: g.driver.lastName,
           code: g.driver.code,
           number: g.driver.number,
           headshotUrl: g.driver.headshotUrl,
@@ -93,7 +93,6 @@ export default async function ApostasPage({ params, searchParams }: { params: Pr
         })),
         predictedSC: bet.predictedSC,
         predictedDNF: bet.predictedDNF,
-        allInDriverId: bet.driverId,
         doublePoints: bet.doublePoints,
       };
       if (bet.result) {
@@ -126,7 +125,7 @@ export default async function ApostasPage({ params, searchParams }: { params: Pr
         grid: bet.predictedGrid.map(g => ({
           position: g.predictedPosition,
           driverId: g.driver.id,
-          lastName: (g.driver as any).lastName ?? g.driver.name,
+          lastName: g.driver.lastName,
           code: g.driver.code,
           number: g.driver.number,
           headshotUrl: g.driver.headshotUrl,
@@ -181,7 +180,7 @@ export default async function ApostasPage({ params, searchParams }: { params: Pr
 
   const serializedDrivers = allDrivers.map(d => ({
     id: d.id,
-    lastName: (d as any).lastName ?? d.name,
+    lastName: d.lastName,
     code: d.code,
     number: d.number,
     headshotUrl: d.headshotUrl,

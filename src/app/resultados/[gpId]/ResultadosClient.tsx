@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import GridRow from '@/components/GridRow';
+import Grid from '@/components/Grid';
 import { GpSessionBar } from '@/components/GpSessionBar';
 import type { GridRowData, CardVariant } from '@/types/grid';
 
@@ -96,20 +96,21 @@ export default function ResultadosClient({ sessions, gpName, currentGpId, allGps
     );
   }
 
-  const gridRow = (row: GridRowData) => (
-    <GridRow
-      key={row.position}
-      data={row}
-      showDropdown={false}
-      showDelta={isRaceType}
-      showBadges={false}
-      availableDrivers={[]}
-      onDriverSelect={() => {}}
-    />
-  );
+  const half = Math.ceil(rows.length / 2);
+  const firstHalf = rows.slice(0, half);
+  const secondHalf = rows.slice(half);
+
+  const gridProps = {
+    allDrivers: [] as [],
+    showDropdown: false,
+    showDelta: isRaceType,
+    showBadges: false,
+    rowGap: 'gap-2',
+    onDriverSelect: () => {},
+  };
 
   return (
-    <div>
+    <div className="flex flex-col gap-8 pb-20">
       <GpSessionBar
         gpName={gpName}
         currentGpId={currentGpId}
@@ -120,19 +121,15 @@ export default function ResultadosClient({ sessions, gpName, currentGpId, allGps
         onSessionChange={setActiveSessionId}
       />
 
-      {/* Grid: coluna única em tela estreita, duas colunas em xl+ */}
-      <div className="pt-2 xl:pt-6">
-        <div className="flex flex-col gap-2 xl:hidden">
-          {rows.map(gridRow)}
-        </div>
-        <div className="hidden xl:flex gap-20 justify-center">
-          <div className="flex flex-col gap-2">
-            {rows.slice(0, Math.ceil(rows.length / 2)).map(gridRow)}
-          </div>
-          <div className="flex flex-col gap-2">
-            {rows.slice(Math.ceil(rows.length / 2)).map(gridRow)}
-          </div>
-        </div>
+      {/* Mobile: grid único */}
+      <div className="xl:hidden">
+        <Grid key={activeSessionId} rows={rows} {...gridProps} />
+      </div>
+
+      {/* Desktop: dois grids lado a lado */}
+      <div className="hidden xl:flex gap-8 justify-center">
+        <Grid key={`${activeSessionId}-a`} rows={firstHalf} {...gridProps} />
+        <Grid key={`${activeSessionId}-b`} rows={secondHalf} {...gridProps} />
       </div>
     </div>
   );

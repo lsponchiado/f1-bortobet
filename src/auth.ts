@@ -11,9 +11,9 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     async jwt({ token, user }) {
       // On sign-in, persist extra fields
       if (user) {
-        token.username = (user as any).username;
+        token.username = user.username;
         token.id = user.id;
-        token.role = (user as any).role;
+        token.role = user.role;
         return token;
       }
       // On every subsequent request, verify user still exists in DB

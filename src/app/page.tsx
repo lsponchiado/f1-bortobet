@@ -63,7 +63,7 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
     ? await prisma.betSprint.findFirst({ where: { userId, sessionId: sprintSession.id } })
     : null;
 
-  const displayUsername = (session.user as any).username || session.user.name || 'User';
+  const displayUsername = session.user.username || session.user.name || 'User';
 
   const minRound = allRounds[0]?.round ?? 1;
   const maxRound = allRounds[allRounds.length - 1]?.round ?? 1;
@@ -75,7 +75,7 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
 
   return (
     <div className="min-h-screen bg-[#050505]">
-      <Navbar username={displayUsername} isAdmin={(session.user as any).role === 'ADMIN'} />
+      <Navbar username={displayUsername} isAdmin={session.user.role === 'ADMIN'} />
       <main className="pt-6 p-6 pb-40 md:pb-6 lg:p-12 flex flex-col items-center">
         <div className="w-full max-w-5xl space-y-12">
           <div className="px-2 flex items-center justify-between">
