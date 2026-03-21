@@ -2,15 +2,9 @@ import 'dotenv/config';
 import { PrismaClient } from '@prisma/client';
 import { Pool } from 'pg';
 import { PrismaPg } from '@prisma/adapter-pg';
-import * as nodeCrypto from 'crypto';
-
 const pool = new Pool({ connectionString: process.env.DATABASE_URL });
 const adapter = new PrismaPg(pool);
 const prisma = new PrismaClient({ adapter });
-
-function generateInviteCode(): string {
-  return nodeCrypto.randomBytes(4).toString('hex').toUpperCase();
-}
 
 async function main() {
   console.log('🏁 [SEED] Iniciando seed...');
@@ -26,29 +20,73 @@ async function main() {
     }
   });
   console.log('✅ Temporada 2026 criada');
-  //teste
 
-  // 2. Geração de Convites
-  console.log('🎲 Gerando lotes de convites...');
-  const batches = [
-    { category: "HAAS" as const, count: 20 },
-    { category: "STROLL" as const, count: 20 }
-  ];
+  // 2. Pilotos e Equipes via OpenF1
+  console.log('🏎️  Buscando pilotos na OpenF1...');
+  const res = await fetch('https://api.openf1.org/v1/drivers?session_key=latest');
 
-  for (const batch of batches) {
-    let created = 0;
-    while (created < batch.count) {
-      const code = generateInviteCode();
-      try {
-        await prisma.inviteCode.create({ data: { code, category: batch.category, used: false } });
-        created++;
-      } catch (e) { continue; }
-    }
-    console.log(`✅ ${batch.count} convites gerados para ${batch.category}`);
+  if (!res.ok) {
+    throw new Error(`OpenF1 respondeu com status ${res.status}`);
   }
 
-  console.log('\n🏁 [SEED] Pronto! Rode agora: npm run sync:f1');
-  console.log('   Isso vai importar equipes, pilotos, GPs e sessões da Open F1.\n');
+  interface OpenF1Driver {
+    driver_number: number;
+    first_name: string;
+    last_name: string;
+    name_acronym: string;
+    country_code: string;
+    headshot_url: string | null;
+    team_name: string;
+    team_colour: string;
+  }
+
+  const data: OpenF1Driver[] = await res.json();
+
+  // Deduplica por driver_number
+  const uniqueDrivers = new Map<number, OpenF1Driver>();
+  for (const d of data) {
+    uniqueDrivers.set(d.driver_number, d);
+  }
+
+  const drivers = Array.from(uniqueDrivers.values());
+  console.log(`📋 ${drivers.length} pilotos encontrados`);
+
+  for (const d of drivers) {
+    const team = await prisma.team.upsert({
+      where: { name: d.team_name },
+      update: { color: `#${d.team_colour}` },
+      create: {
+        name: d.team_name,
+        color: `#${d.team_colour}`,
+        country: '',
+      },
+    });
+
+    await prisma.driver.upsert({
+      where: { code: d.name_acronym },
+      update: {
+        firstName: d.first_name,
+        lastName: d.last_name,
+        number: d.driver_number,
+        country: d.country_code ?? '',
+        headshotUrl: d.headshot_url,
+        teamId: team.id,
+      },
+      create: {
+        firstName: d.first_name,
+        lastName: d.last_name,
+        code: d.name_acronym,
+        number: d.driver_number,
+        country: d.country_code ?? '',
+        headshotUrl: d.headshot_url,
+        teamId: team.id,
+      },
+    });
+
+    console.log(`  ✅ ${d.first_name} ${d.last_name} (${d.name_acronym} #${d.driver_number}) → ${d.team_name}`);
+  }
+
+  console.log('\n🏁 [SEED] Pronto!');
 }
 
 /*
