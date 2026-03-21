@@ -32,7 +32,7 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
 
   // Busca todos os rounds disponíveis da temporada
   const allRounds = await prisma.session.findMany({
-    where: { type: 'RACE', seasonId },
+    where: { type: 'RACE', seasonId, cancelled: false },
     orderBy: { round: 'asc' },
     select: { round: true, grandPrix: { select: { name: true } } },
   });
@@ -41,7 +41,7 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
   const currentRound = roundParam ? parseInt(roundParam, 10) : defaultRound;
 
   const raceSession = await prisma.session.findFirst({
-    where: { type: 'RACE', round: currentRound, seasonId },
+    where: { type: 'RACE', round: currentRound, seasonId, cancelled: false },
     include: { grandPrix: true, season: true, betRaces: { where: { userId } } },
   });
 
@@ -54,7 +54,7 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
   }
 
   const roundSessions = await prisma.session.findMany({
-    where: { round: currentRound, seasonId },
+    where: { round: currentRound, seasonId, cancelled: false },
     orderBy: { date: 'asc' },
   });
 
