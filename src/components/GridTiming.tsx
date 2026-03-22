@@ -1,3 +1,5 @@
+import { BADGE_SMALL } from './grid-constants';
+
 interface TimingData {
   gapToLeader: number | null;
   interval: number | null;
@@ -29,7 +31,7 @@ function formatGap(seconds: number): string {
 export function GridTiming({ timing, position }: { timing?: TimingData; position: number }) {
   if (!timing) {
     return (
-      <div className="flex h-16 w-20 shrink-0 items-center justify-center rounded-sm bg-gray-800">
+      <div className="flex shrink-0 items-center justify-center rounded-sm bg-gray-800" style={BADGE_SMALL}>
         <span className="text-gray-600 text-[10px] font-bold">--</span>
       </div>
     );
@@ -49,7 +51,7 @@ export function GridTiming({ timing, position }: { timing?: TimingData; position
   }
 
   return (
-    <div className="flex h-16 w-20 shrink-0 flex-col items-center justify-center rounded-sm bg-gray-800 px-1">
+    <div className="flex shrink-0 flex-col items-center justify-center rounded-sm bg-gray-800 px-1" style={BADGE_SMALL}>
       <span className="text-white font-bold text-[11px] leading-tight tracking-tight">
         {topLine}
       </span>

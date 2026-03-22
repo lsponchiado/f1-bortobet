@@ -1,3 +1,5 @@
+import { BADGE_LARGE, BADGE_LARGE_PAD, MIN_SCROLL_SLOTS, getScrollMargins } from './grid-constants';
+
 const COMPOUND_COLORS: Record<string, { bg: string; text: string }> = {
   SOFT: { bg: '#e10600', text: '#fff' },
   MEDIUM: { bg: '#f5c518', text: '#000' },
@@ -5,8 +7,6 @@ const COMPOUND_COLORS: Record<string, { bg: string; text: string }> = {
   INTERMEDIATE: { bg: '#43b02a', text: '#fff' },
   WET: { bg: '#0072c6', text: '#fff' },
 };
-
-const MIN_SLOTS = 3;
 
 function parseStint(stint: string): { compound: string; laps: number | null } {
   const parts = stint.split(':');
@@ -17,30 +17,22 @@ function parseStint(stint: string): { compound: string; laps: number | null } {
 
 export function GridTires({ tireStints }: { tireStints?: string[] }) {
   const stints = tireStints ?? [];
-  const slots = Math.max(MIN_SLOTS, stints.length);
+  const slots = Math.max(MIN_SCROLL_SLOTS, stints.length);
 
-  // circle 28px, gap 4px, pad 8px each side
-  // width = 8 + 28 + 4 + 28 + 4 + 28 + 8 = 108
   return (
     <div
       className="scrollbar-hide flex shrink-0 items-center gap-1 rounded-sm bg-gray-800"
       style={{
-        width: 108,
-        height: 64,
+        ...BADGE_LARGE,
         overflowX: 'auto',
         overflowY: 'hidden',
         scrollSnapType: 'x mandatory',
-        scrollPaddingInlineStart: 8,
+        scrollPaddingInlineStart: BADGE_LARGE_PAD,
         WebkitOverflowScrolling: 'touch',
       }}
     >
       {Array.from({ length: slots }, (_, i) => {
-        const isFirst = i === 0;
-        const isLast = i === slots - 1;
-        const margin = {
-          ...(isFirst && { marginLeft: 8 }),
-          ...(isLast && { marginRight: 8 }),
-        };
+        const margin = getScrollMargins(i, slots, BADGE_LARGE_PAD);
 
         if (i < stints.length) {
           const { compound, laps } = parseStint(stints[i]);

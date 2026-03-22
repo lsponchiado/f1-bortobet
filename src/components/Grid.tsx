@@ -11,6 +11,10 @@ interface GridProps {
   showBadges?: boolean;
   showTiming?: boolean;
   showTires?: boolean;
+  showSectors?: boolean;
+  showSpeed?: boolean;
+  showPitStops?: boolean;
+  bestSectors?: { s1: number | null; s2: number | null; s3: number | null };
   rowGap?: string;
 }
 
@@ -23,6 +27,10 @@ export function Grid({
   showBadges = true,
   showTiming = false,
   showTires = false,
+  showSectors = false,
+  showSpeed = false,
+  showPitStops = false,
+  bestSectors,
   rowGap = 'gap-2',
 }: GridProps) {
   
@@ -50,6 +58,10 @@ export function Grid({
           showBadges={showBadges}
           showTiming={showTiming}
           showTires={showTires}
+          showSectors={showSectors}
+          showSpeed={showSpeed}
+          showPitStops={showPitStops}
+          bestSectors={bestSectors}
           availableDrivers={availableDrivers}
           allDrivers={allDrivers}
           onDriverSelect={onDriverSelect}

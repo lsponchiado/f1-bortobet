@@ -26,4 +26,29 @@ export interface GridRowData {
     bestLapTime: number | null;
   };
   tireStints?: string[];
+  sectors?: { s1: number | null; s2: number | null; s3: number | null };
+  speed?: number | null;
+  drsOn?: boolean;
+  pitStops?: PitStop[];
+}
+
+export interface PitStop {
+  lap: number;
+  duration: number | null;
+}
+
+export interface RaceControlMessage {
+  date: string;
+  category: string;
+  flag?: string;
+  message: string;
+  driverNumber?: number;
+}
+
+export interface WeatherData {
+  airTemperature: number | null;
+  trackTemperature: number | null;
+  humidity: number | null;
+  rainfall: boolean;
+  windSpeed: number | null;
 }
