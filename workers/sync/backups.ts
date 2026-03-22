@@ -1,3 +1,5 @@
+import 'dotenv/config';
+
 /**
  * Lógica de backup auto-aplicada — cópia standalone para o worker.
  * Não depende de imports do app Next.js.
