@@ -27,14 +27,29 @@ const API = 'https://api.openf1.org/v1';
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
-async function fetchAPI(endpoint: string, params: Record<string, string | number> = {}): Promise<any[]> {
+async function fetchAPI(endpoint: string, params: Record<string, string | number> = {}, retries = 3): Promise<any[]> {
   const url = new URL(`${API}/${endpoint}`);
   for (const [key, val] of Object.entries(params)) {
     url.searchParams.set(key, String(val));
   }
-  const res = await fetch(url.toString());
-  if (!res.ok) throw new Error(`API ${res.status}: ${url}`);
-  return res.json() as Promise<any[]>;
+
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    const res = await fetch(url.toString());
+
+    if (res.status === 429) {
+      const wait = Math.pow(2, attempt + 1) * 5000; // 10s, 20s, 40s
+      console.log(`  Rate limited, aguardando ${wait / 1000}s...`);
+      await delay(wait);
+      continue;
+    }
+
+    if (res.status === 404) return []; // endpoint sem dados pra essa sessão
+    if (!res.ok) throw new Error(`API ${res.status}: ${url}`);
+    return res.json() as Promise<any[]>;
+  }
+
+  console.log(`  Rate limit persistente, pulando: ${endpoint}`);
+  return [];
 }
 
 const delay = (ms: number) => new Promise(r => setTimeout(r, ms));
@@ -166,14 +181,16 @@ async function mapOpenF1Keys() {
 // ── Sync Session Results ─────────────────────────────────────────────────────
 
 async function syncSessionResults(sessionKey: number, sessionId: number) {
-  // Busca tudo em paralelo
-  const [positions, lapsData, raceControlMsgs, stintsData, intervalsData] = await Promise.all([
-    fetchAPI('position', { session_key: sessionKey }),
-    fetchAPI('laps', { session_key: sessionKey }),
-    fetchAPI('race_control', { session_key: sessionKey }),
-    fetchAPI('stints', { session_key: sessionKey }),
-    fetchAPI('intervals', { session_key: sessionKey }),
-  ]);
+  // Busca sequencialmente pra respeitar rate limit
+  const positions = await fetchAPI('position', { session_key: sessionKey });
+  await delay(2000);
+  const lapsData = await fetchAPI('laps', { session_key: sessionKey });
+  await delay(2000);
+  const raceControlMsgs = await fetchAPI('race_control', { session_key: sessionKey });
+  await delay(2000);
+  const stintsData = await fetchAPI('stints', { session_key: sessionKey });
+  await delay(2000);
+  const intervalsData = await fetchAPI('intervals', { session_key: sessionKey });
 
   // Posições finais e iniciais
   const finalPosMap = new Map<number, number>();
@@ -330,7 +347,7 @@ async function main() {
       console.error(`  ERRO: ${err.message}`);
     }
 
-    await delay(500); // rate limiting
+    await delay(3000); // rate limiting entre sessões
   }
 
   console.log('\n[seed] Concluído!');
