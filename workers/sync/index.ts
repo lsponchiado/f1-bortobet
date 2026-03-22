@@ -1,4 +1,9 @@
-import 'dotenv/config';
+import dotenv from 'dotenv';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+dotenv.config({ path: path.resolve(__dirname, '../../.env') });
 
 /**
  * Sync Worker
@@ -22,7 +27,7 @@ import mqtt from 'mqtt';
 import { applyBackupsForSession } from './backups.js';
 
 const prisma = new PrismaClient({
-  datasourceUrl: process.env.DATABASE_URL,
+  datasources: { db: { url: process.env.DATABASE_URL } },
 });
 
 const MONGO_URI = process.env.OPENF1_MONGO_URI || 'mongodb://localhost:27017';
