@@ -21,7 +21,9 @@ import { PrismaClient } from '@prisma/client';
 import mqtt from 'mqtt';
 import { applyBackupsForSession } from './backups.js';
 
-const prisma = new PrismaClient();
+const prisma = new PrismaClient({
+  datasourceUrl: process.env.DATABASE_URL,
+});
 
 const MONGO_URI = process.env.OPENF1_MONGO_URI || 'mongodb://localhost:27017';
 const MONGO_DB = process.env.OPENF1_MONGO_DB || 'openf1';
