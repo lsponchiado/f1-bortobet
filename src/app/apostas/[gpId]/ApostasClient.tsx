@@ -322,7 +322,7 @@ export function ApostasClient(props: ApostasClientProps) {
             rows={rows}
             allDrivers={allDrivers}
             showDropdown={isEditable}
-            showDelta={true}
+            showDelta={hasQualiResults || (!isEditable && !!activeResult)}
             showBadges={!isEditable && activeSession?.hasEntries}
             rowGap="gap-2"
             onDriverSelect={handleDriverSelect}

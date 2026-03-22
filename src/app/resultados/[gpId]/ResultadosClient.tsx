@@ -1,9 +1,12 @@
 'use client';
 
 import { useState } from 'react';
+import { ArrowUpDown, Clock, Circle } from 'lucide-react';
 import { Grid } from '@/components/Grid';
 import { GpSessionBar } from '@/components/GpSessionBar';
 import type { GridRowData, CardVariant } from '@/types/grid';
+
+type ViewOption = 'delta' | 'tempos' | 'stints';
 
 interface SessionEntry {
   startPosition: number;
@@ -12,6 +15,10 @@ interface SessionEntry {
   dnf: boolean;
   dsq: boolean;
   fastestLap: boolean;
+  bestLapTime: number | null;
+  gapToLeader: number | null;
+  interval: number | null;
+  tireStints: string[];
   driver: {
     id: number;
     lastName: string;
@@ -60,6 +67,12 @@ function entryToRowData(entry: SessionEntry, position: number): GridRowData {
     driver: entry.driver,
     delta,
     variant,
+    timing: {
+      gapToLeader: entry.gapToLeader,
+      interval: entry.interval,
+      bestLapTime: entry.bestLapTime,
+    },
+    tireStints: entry.tireStints,
   };
 }
 
@@ -77,6 +90,8 @@ export function ResultadosClient({ sessions, gpName, currentGpId, allGps }: Resu
       return sessionsWithEntries[sessionsWithEntries.length - 1]?.id ?? null;
     }
   );
+
+  const [activeView, setActiveView] = useState<ViewOption>('delta');
 
   const activeSession = sessionsWithEntries.find(s => s.id === activeSessionId);
 
@@ -100,26 +115,62 @@ export function ResultadosClient({ sessions, gpName, currentGpId, allGps }: Resu
   const firstHalf = rows.slice(0, half);
   const secondHalf = rows.slice(half);
 
+  const hasTiming = rows.some(r => r.timing?.gapToLeader != null || r.timing?.bestLapTime != null);
+  const hasTires = rows.some(r => r.tireStints && r.tireStints.length > 0);
+
+  const viewOptions: { key: ViewOption; label: string; icon: React.ElementType; available: boolean }[] = [
+    { key: 'delta', label: 'Delta', icon: ArrowUpDown, available: isRaceType },
+    { key: 'tempos', label: 'Tempos', icon: Clock, available: isRaceType && hasTiming },
+    { key: 'stints', label: 'Stints', icon: Circle, available: isRaceType && hasTires },
+  ];
+
+  const availableOptions = viewOptions.filter(o => o.available);
+
   const gridProps = {
     allDrivers: [] as [],
     showDropdown: false,
-    showDelta: isRaceType,
+    showDelta: activeView === 'delta',
     showBadges: false,
+    showTiming: activeView === 'tempos',
+    showTires: activeView === 'stints',
     rowGap: 'gap-2',
     onDriverSelect: () => {},
   };
 
   return (
     <div className="flex flex-col gap-8 pb-20">
-      <GpSessionBar
-        gpName={gpName}
-        currentGpId={currentGpId}
-        allGps={allGps}
-        basePath="/resultados"
-        sessions={sessionsWithEntries}
-        activeSessionId={activeSessionId}
-        onSessionChange={setActiveSessionId}
-      />
+      <div className="flex flex-col gap-3">
+        <GpSessionBar
+          gpName={gpName}
+          currentGpId={currentGpId}
+          allGps={allGps}
+          basePath="/resultados"
+          sessions={sessionsWithEntries}
+          activeSessionId={activeSessionId}
+          onSessionChange={setActiveSessionId}
+        />
+
+        {isRaceType && availableOptions.length > 1 && (
+          <div className="flex justify-center">
+            <div className="inline-flex gap-1 bg-[#1f1f27] border border-white/5 rounded-xl p-1">
+              {availableOptions.map(({ key, label, icon: Icon }) => (
+                <button
+                  key={key}
+                  onClick={() => setActiveView(key)}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase italic tracking-wider transition-all ${
+                    activeView === key
+                      ? 'bg-[#e10600] text-white'
+                      : 'text-gray-500 hover:text-gray-300'
+                  }`}
+                >
+                  <Icon size={12} />
+                  {label}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
 
       {/* Mobile: grid único */}
       <div className="xl:hidden">

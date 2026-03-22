@@ -20,4 +20,10 @@ export interface GridRowData {
   delta?: number | string;
   badges?: BadgeType[];
   variant?: CardVariant;
+  timing?: {
+    gapToLeader: number | null;
+    interval: number | null;
+    bestLapTime: number | null;
+  };
+  tireStints?: string[];
 }

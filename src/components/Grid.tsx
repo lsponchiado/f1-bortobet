@@ -9,6 +9,8 @@ interface GridProps {
   showDropdown?: boolean;
   showDelta?: boolean;
   showBadges?: boolean;
+  showTiming?: boolean;
+  showTires?: boolean;
   rowGap?: string;
 }
 
@@ -19,6 +21,8 @@ export function Grid({
   showDropdown = true,
   showDelta = true,
   showBadges = true,
+  showTiming = false,
+  showTires = false,
   rowGap = 'gap-2',
 }: GridProps) {
   
@@ -35,9 +39,6 @@ export function Grid({
       .sort((a, b) => a.lastName.localeCompare(b.lastName));
   }, [rows, allDrivers]);
 
-  const anyHasDelta = showDelta && rows.some(r => r.delta !== undefined);
-  const anyHasBadges = showBadges && rows.some(r => r.badges && r.badges.length > 0);
-
   return (
     <div className={`flex flex-col w-full max-w-3xl mx-auto ${rowGap}`}>
       {(rows || []).map((row) => (
@@ -45,8 +46,10 @@ export function Grid({
           key={row.position}
           data={row}
           showDropdown={showDropdown}
-          showDelta={anyHasDelta}
-          showBadges={anyHasBadges}
+          showDelta={showDelta}
+          showBadges={showBadges}
+          showTiming={showTiming}
+          showTires={showTires}
           availableDrivers={availableDrivers}
           allDrivers={allDrivers}
           onDriverSelect={onDriverSelect}

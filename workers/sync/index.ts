@@ -198,6 +198,26 @@ async function syncSessionResults(sessionKey: number) {
     data: { scCount, vscCount },
   });
 
+  // Buscar stints (pneus) por piloto
+  const stints = await db.collection('stints')
+    .find({ session_key: sessionKey })
+    .sort({ stint_number: 1 })
+    .toArray();
+
+  // Formato: "COMPOUND:LAPS" (ex: "MEDIUM:18")
+  const stintMap = new Map<number, string[]>();
+  for (const s of stints) {
+    if (!s.driver_number || !s.compound) continue;
+    if (!stintMap.has(s.driver_number)) {
+      stintMap.set(s.driver_number, []);
+    }
+    const compound = (s.compound as string).toUpperCase();
+    const lapStart = s.lap_start ?? 0;
+    const lapEnd = s.lap_end ?? lapStart;
+    const laps = lapEnd - lapStart + 1;
+    stintMap.get(s.driver_number)!.push(`${compound}:${laps}`);
+  }
+
   // Buscar intervals finais (último registro por piloto)
   const intervals = await db.collection('intervals')
     .find({ session_key: sessionKey })
@@ -245,6 +265,7 @@ async function syncSessionResults(sessionKey: number) {
     const gapToLeader = parseGap(gaps?.gap_to_leader);
     const interval = parseGap(gaps?.interval);
     const bestLapTime = bestLapMap.get(r.driver_number) ?? null;
+    const tireStints = stintMap.get(r.driver_number) ?? [];
 
     await prisma.sessionEntry.upsert({
       where: {
@@ -265,6 +286,7 @@ async function syncSessionResults(sessionKey: number) {
         teamId: driver.teamId,
         gapToLeader,
         interval,
+        tireStints,
       },
       create: {
         sessionId: session.id,
@@ -280,6 +302,7 @@ async function syncSessionResults(sessionKey: number) {
         bestLapTime,
         gapToLeader,
         interval,
+        tireStints,
       },
     });
 

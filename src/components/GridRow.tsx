@@ -4,6 +4,8 @@ import { GridCard } from './GridCard';
 import { GridDropdown } from './GridDropdown';
 import { GridDelta } from './GridDelta';
 import { GridBadges } from './GridBadges';
+import { GridTiming } from './GridTiming';
+import { GridTires } from './GridTires';
 import type { GridRowData, GridDriver } from '../types/grid';
 
 interface GridRowProps {
@@ -11,6 +13,8 @@ interface GridRowProps {
   showDropdown?: boolean;
   showDelta?: boolean;
   showBadges?: boolean;
+  showTiming?: boolean;
+  showTires?: boolean;
   availableDrivers?: GridDriver[];
   allDrivers?: GridDriver[];
   onDriverSelect?: (position: number, driver: GridDriver | null) => void;
@@ -21,11 +25,13 @@ const GridRow = memo(function GridRow({
   showDropdown,
   showDelta,
   showBadges,
+  showTiming,
+  showTires,
   availableDrivers,
   allDrivers,
   onDriverSelect
 }: GridRowProps) {
-  const { position, driver, delta, badges, variant } = data;
+  const { position, driver, delta, badges, variant, timing, tireStints } = data;
 
   const groupedDrivers = useMemo(() => {
     if (!availableDrivers) return undefined;
@@ -52,6 +58,8 @@ const GridRow = memo(function GridRow({
       />
 
       {showDelta && <GridDelta delta={delta} />}
+      {showTiming && <GridTiming timing={timing} position={position} />}
+      {showTires && <GridTires tireStints={tireStints} />}
       {showBadges && <GridBadges badges={badges} />}
     </div>
   );

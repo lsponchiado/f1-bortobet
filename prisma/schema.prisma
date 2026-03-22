@@ -200,6 +200,7 @@ model SessionEntry {
   bestLapTime    Float?
   gapToLeader    Float?
   interval       Float?
+  tireStints     String[]
   session        Session @relation(fields: [sessionId], references: [id])
   driver         Driver  @relation(fields: [driverId], references: [id])
   team           Team    @relation(fields: [teamId], references: [id])

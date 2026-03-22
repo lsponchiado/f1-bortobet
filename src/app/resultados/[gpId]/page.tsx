@@ -58,6 +58,10 @@ export default async function ResultadosPage({ params }: { params: Promise<{ gpI
       dnf: e.dnf,
       dsq: e.dsq,
       fastestLap: e.fastestLap,
+      bestLapTime: e.bestLapTime,
+      gapToLeader: e.gapToLeader,
+      interval: e.interval,
+      tireStints: e.tireStints,
       driver: {
         id: e.driver.id,
         lastName: e.driver.lastName,
