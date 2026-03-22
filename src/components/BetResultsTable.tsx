@@ -1,18 +1,4 @@
-interface RaceResultData {
-  somaPos: number[];
-  hailMary: number[];
-  underdog: number[];
-  freefall: number[];
-  fastestLap: number;
-  safetyCar: number;
-  abandonos: number;
-  somaTotal: number;
-}
-
-interface SprintResultData {
-  somaPos: number[];
-  somaTotal: number;
-}
+import type { RaceResultData, SprintResultData } from '@/lib/constants';
 
 interface BetResultsTableProps {
   result: RaceResultData | SprintResultData;

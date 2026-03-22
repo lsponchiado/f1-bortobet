@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import GridRow from './GridRow';
+import { GridRow } from './GridRow';
 import type { GridRowData, GridDriver } from '../types/grid';
 
 interface GridProps {
@@ -12,7 +12,7 @@ interface GridProps {
   rowGap?: string;
 }
 
-export default function Grid({
+export function Grid({
   rows,
   allDrivers,
   onDriverSelect,

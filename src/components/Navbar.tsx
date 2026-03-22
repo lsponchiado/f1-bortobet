@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Trophy, User, LogOut, LayoutDashboard, BookOpen, Settings } from 'lucide-react';
 import { signOut } from 'next-auth/react';
+import pkg from '../../package.json';
 
 interface NavbarProps {
   username: string;
@@ -35,8 +36,9 @@ export function Navbar({ username, isAdmin = false }: NavbarProps) {
       {/* Desktop top bar */}
       <nav className="fixed top-0 w-full z-50 bg-[#15151e]/80 backdrop-blur-md border-b border-gray-800 px-6 py-3">
         <div className="max-w-7xl mx-auto flex justify-between items-center">
-          <Link href="/" className="text-[#e10600] text-2xl font-black italic tracking-tighter uppercase">
+          <Link href="/" className="inline-flex items-end gap-4 text-[#e10600] text-2xl font-black italic tracking-tighter uppercase leading-none">
             F1 BORTOBET
+            <span className="text-[9px] font-bold tracking-wide text-gray-500 not-italic leading-none">v{pkg.version}</span>
           </Link>
 
           <div className="hidden md:flex items-center gap-1">
@@ -60,7 +62,7 @@ export function Navbar({ username, isAdmin = false }: NavbarProps) {
           </div>
 
           <div className="flex items-center gap-3">
-            <span className="text-xs font-bold text-gray-500 hidden sm:inline">@{username}</span>
+            <span className="text-xs font-bold text-gray-500 hidden sm:inline">{username}</span>
             <button
               onClick={handleLogout}
               className="text-gray-500 hover:text-[#e10600] transition-colors p-1.5 rounded-lg hover:bg-white/5"

@@ -31,7 +31,7 @@ export default function LoginPage() {
               type="text" 
               required 
               className="w-full bg-[#2b2b35] border border-transparent rounded-xl p-4 text-white focus:ring-2 focus:ring-[#e10600] outline-none transition-all"
-              placeholder="seu@email.com ou @username"
+              placeholder="seu@email.com ou username"
             />
           </div>
 

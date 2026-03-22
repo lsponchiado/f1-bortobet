@@ -39,7 +39,7 @@ export default function RegisterPage() {
             </div>
             <div>
               <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1 ml-1">Username</label>
-              <input name="username" defaultValue={state?.fields?.username} placeholder="@claudio" className="w-full bg-[#2b2b35] rounded-xl p-3 text-sm focus:ring-1 focus:ring-[#e10600] outline-none transition-all" />
+              <input name="username" defaultValue={state?.fields?.username} placeholder="claudio" className="w-full bg-[#2b2b35] rounded-xl p-3 text-sm focus:ring-1 focus:ring-[#e10600] outline-none transition-all" />
             </div>
           </div>
 

@@ -2,12 +2,14 @@
 
 import { useState, useMemo, useEffect, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
-import Grid from '@/components/Grid';
+import { Grid } from '@/components/Grid';
 import { GpSessionBar } from '@/components/GpSessionBar';
 import { BetExtrasPanel } from '@/components/BetExtrasPanel';
 import { BetResultsTable } from '@/components/BetResultsTable';
 import type { GridRowData, GridDriver, CardVariant, BadgeType } from '@/types/grid';
-import { saveRaceBet, saveSprintBet } from '@/lib/actions';
+import { placeholderDriver } from '@/lib/grid';
+import { saveRaceBet, saveSprintBet, deleteRaceBet, deleteSprintBet } from '@/lib/actions';
+import { GRID_SIZE, type BetGridItem, type RaceResultData, type SprintResultData } from '@/lib/constants';
 
 interface SessionEntry {
   driverId: number;
@@ -41,41 +43,14 @@ interface SessionInfo {
   entries: SessionEntry[];
 }
 
-interface BetGridItem {
-  position: number;
-  driverId: number;
-  lastName: string;
-  code: string;
-  number: number;
-  headshotUrl: string | null;
-  team: { name: string; color: string; logoUrl: string | null };
-  fastestLap: boolean;
-}
-
 interface ExistingBets {
   race: {
     grid: BetGridItem[];
     predictedSC: number;
     predictedDNF: number;
-    doublePoints: boolean
+    doublePoints: boolean;
   } | null;
   sprint: { grid: BetGridItem[] } | null;
-}
-
-interface RaceResultData {
-  somaPos: number[];
-  hailMary: number[];
-  underdog: number[];
-  freefall: number[];
-  fastestLap: number;
-  safetyCar: number;
-  abandonos: number;
-  somaTotal: number;
-}
-
-interface SprintResultData {
-  somaPos: number[];
-  somaTotal: number;
 }
 
 interface BetResults {
@@ -83,41 +58,35 @@ interface BetResults {
   sprint: SprintResultData | null;
 }
 
+interface GpOption {
+  id: number;
+  name: string;
+  country: string;
+}
+
 interface ApostasClientProps {
   sessions: SessionInfo[];
   gpName: string;
   currentGpId: number;
-  allGps: any[];
+  allGps: GpOption[];
   allDrivers: GridDriver[];
   existingBets: ExistingBets;
   betResults: BetResults;
   qualifyingResults: { RACE: Record<number, number>; SPRINT: Record<number, number> };
-  seasonConfig: any;
   isAdmin: boolean;
   currentUserId: number;
-  allUsers: any[];
+  doublePointsRemaining: number;
 }
 
-function placeholderDriver(position: number): GridDriver {
-  return {
-    id: -position, 
-    lastName: '???',
-    code: '???',
-    number: 0,
-    headshotUrl: null,
-    team: { name: '', color: '#333', logoUrl: null },
-  };
-}
-
-export default function ApostasClient(props: ApostasClientProps) {
-  const { sessions, gpName, currentGpId, allGps, allDrivers, existingBets, betResults, qualifyingResults, currentUserId } = props;
+export function ApostasClient(props: ApostasClientProps) {
+  const { sessions, gpName, currentGpId, allGps, allDrivers, existingBets, betResults, qualifyingResults, currentUserId, isAdmin, doublePointsRemaining } = props;
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
 
   // User bypass: redirect to ?asUser=X if needed
   useEffect(() => {
-    if (!props.isAdmin) return;
+    if (!isAdmin) return;
     const bypassActive = sessionStorage.getItem('betUserBypass') === 'true';
     const bypassUserId = sessionStorage.getItem('betUserBypassId');
     const url = new URL(window.location.href);
@@ -130,7 +99,7 @@ export default function ApostasClient(props: ApostasClientProps) {
       url.searchParams.delete('asUser');
       router.replace(url.pathname + url.search);
     }
-  }, [props.isAdmin, router]);
+  }, [isAdmin, router]);
 
   const allBettableSessions = sessions
     .filter(s => !s.cancelled && (s.type === 'RACE' || s.type === 'SPRINT'))
@@ -147,9 +116,9 @@ export default function ApostasClient(props: ApostasClientProps) {
   const isBeforeSession = activeSession ? new Date(activeSession.date) > new Date() : false;
   const [lockBypass, setLockBypass] = useState(false);
   useEffect(() => {
-    if (props.isAdmin) setLockBypass(sessionStorage.getItem('betLockBypass') === 'true');
-  }, [props.isAdmin]);
-  const isEditable = isBeforeSession || (props.isAdmin && lockBypass);
+    if (isAdmin) setLockBypass(sessionStorage.getItem('betLockBypass') === 'true');
+  }, [isAdmin]);
+  const isEditable = isBeforeSession || (isAdmin && lockBypass);
   const hasBet = isRace ? existingBets.race !== null : existingBets.sprint !== null;
 
   const existingRaceBet = existingBets.race;
@@ -158,13 +127,14 @@ export default function ApostasClient(props: ApostasClientProps) {
   const [fastestLapId, setFastestLapId] = useState<number | null>(
     existingRaceBet?.grid.find(g => g.fastestLap)?.driverId ?? null
   );
+  const [doublePoints, setDoublePoints] = useState<boolean>(existingRaceBet?.doublePoints ?? false);
 
   const activeResult = isRace ? betResults.race : betResults.sprint;
 
   const gridInitialData = useMemo(() => {
     const betKey = isRace ? 'race' : 'sprint';
     const existingGrid = existingBets[betKey]?.grid;
-    const gridSize = isRace ? 10 : 8;
+    const gridSize = isRace ? GRID_SIZE.RACE : GRID_SIZE.SPRINT;
     const qualiMap = qualifyingResults[activeSession?.type as keyof typeof qualifyingResults] || {};
     const resultMap = new Map(activeSession?.entries.map(e => [e.driverId, e]) || []);
 
@@ -220,6 +190,7 @@ export default function ApostasClient(props: ApostasClientProps) {
       setPredictedSC(existingRaceBet?.predictedSC ?? 0);
       setPredictedDNF(existingRaceBet?.predictedDNF ?? 0);
       setFastestLapId(existingRaceBet?.grid.find(g => g.fastestLap)?.driverId ?? null);
+      setDoublePoints(existingRaceBet?.doublePoints ?? false);
     }
   }, [gridInitialData, isRace, existingRaceBet]);
 
@@ -239,6 +210,59 @@ export default function ApostasClient(props: ApostasClientProps) {
   };
 
   const isGridComplete = rows.every(r => r.driver.id > 0);
+  const isGridEmpty = rows.every(r => r.driver.id <= 0);
+
+  const hasQualiResults = Object.keys(qualiMap).length > 0;
+
+  const handleCopyQuali = () => {
+    const gridSize = isRace ? GRID_SIZE.RACE : GRID_SIZE.SPRINT;
+    // qualiMap: driverId -> qualiPosition. Invert to position -> driverId
+    const posToDriverId = new Map<number, number>();
+    for (const [driverIdStr, pos] of Object.entries(qualiMap)) {
+      posToDriverId.set(pos as number, parseInt(driverIdStr, 10));
+    }
+
+    setRows(Array.from({ length: gridSize }, (_, i) => {
+      const pos = i + 1;
+      const driverId = posToDriverId.get(pos);
+      const driver = driverId ? allDrivers.find(d => d.id === driverId) : undefined;
+      return {
+        position: pos,
+        driver: driver || placeholderDriver(pos),
+        variant: 'default' as CardVariant,
+        badges: [],
+        delta: driver ? 0 : undefined,
+      };
+    }));
+    setSaveStatus('idle');
+  };
+
+  const handleClearGrid = () => {
+    const gridSize = isRace ? GRID_SIZE.RACE : GRID_SIZE.SPRINT;
+    setRows(Array.from({ length: gridSize }, (_, i) => ({
+      position: i + 1,
+      driver: placeholderDriver(i + 1),
+      variant: 'default' as CardVariant,
+      badges: [],
+      delta: undefined,
+    })));
+    setSaveStatus('idle');
+  };
+
+  const handleDelete = () => {
+    if (!activeSession) return;
+    setSaveStatus('saving');
+    startTransition(async () => {
+      const result = isRace
+        ? await deleteRaceBet({ sessionId: activeSession.id, targetUserId: currentUserId })
+        : await deleteSprintBet({ sessionId: activeSession.id, targetUserId: currentUserId });
+      if (result.success) {
+        router.refresh();
+      } else {
+        setSaveStatus('error');
+      }
+    });
+  };
 
   const handleSave = () => {
     if (!activeSession || !isGridComplete) return;
@@ -253,7 +277,7 @@ export default function ApostasClient(props: ApostasClientProps) {
           sessionId: activeSession.id,
           gridIds,
           fastestLapId,
-          doublePoints: false,
+          doublePoints,
           predictedSC,
           predictedDNF,
           targetUserId: currentUserId,
@@ -302,6 +326,27 @@ export default function ApostasClient(props: ApostasClientProps) {
             onDriverSelect={handleDriverSelect}
           />
 
+          {isEditable && (!isGridEmpty || hasQualiResults) && (
+            <div className="flex gap-2">
+              {!isGridEmpty && (
+                <button
+                  onClick={handleClearGrid}
+                  className="flex-1 py-3 rounded-sm font-black uppercase italic tracking-tighter text-sm text-gray-400 border border-white/10 hover:border-white/20 hover:text-white transition-all active:scale-95"
+                >
+                  Limpar Grid
+                </button>
+              )}
+              {hasQualiResults && (
+                <button
+                  onClick={handleCopyQuali}
+                  className="flex-1 py-3 rounded-sm font-black uppercase italic tracking-tighter text-sm text-gray-400 border border-white/10 hover:border-white/20 hover:text-white transition-all active:scale-95"
+                >
+                  Copiar Qualify
+                </button>
+              )}
+            </div>
+          )}
+
           {isRace && activeSession?.raceConfig && (
             <>
             <h3 className="text-xs font-black uppercase italic tracking-widest text-gray-500 text-center">Extras</h3>
@@ -314,6 +359,9 @@ export default function ApostasClient(props: ApostasClientProps) {
               onSCChange={setPredictedSC}
               predictedDNF={predictedDNF}
               onDNFChange={setPredictedDNF}
+              doublePoints={doublePoints}
+              onDoublePointsChange={setDoublePoints}
+              doublePointsRemaining={doublePointsRemaining}
             />
             </>
           )}
@@ -326,19 +374,31 @@ export default function ApostasClient(props: ApostasClientProps) {
           )}
 
           {isEditable && (
-            <button
-              disabled={!isGridComplete || isPending || saveStatus === 'saving'}
-              className={`w-full py-4 rounded-sm font-black uppercase italic tracking-tighter transition-all shadow-xl ${
-                saveStatus === 'saved'
-                  ? 'bg-green-600 text-white cursor-default'
-                  : isGridComplete && saveStatus !== 'saving'
-                    ? 'bg-red-600 text-white hover:bg-red-700 active:scale-95 cursor-pointer'
-                    : 'bg-gray-800 text-gray-600 cursor-not-allowed'
-              }`}
-              onClick={handleSave}
-            >
-              {saveStatus === 'saving' ? 'Processando...' : saveStatus === 'saved' ? '✓ Feito!' : 'Confirmar Aposta'}
-            </button>
+            <>
+              <button
+                disabled={!isGridComplete || isPending || saveStatus === 'saving'}
+                className={`w-full py-4 rounded-sm font-black uppercase italic tracking-tighter transition-all shadow-xl ${
+                  saveStatus === 'saved'
+                    ? 'bg-green-600 text-white cursor-default'
+                    : isGridComplete && saveStatus !== 'saving'
+                      ? 'bg-red-600 text-white hover:bg-red-700 active:scale-95 cursor-pointer'
+                      : 'bg-gray-800 text-gray-600 cursor-not-allowed'
+                }`}
+                onClick={handleSave}
+              >
+                {saveStatus === 'saving' ? 'Processando...' : saveStatus === 'saved' ? '✓ Feito!' : 'Confirmar Aposta'}
+              </button>
+
+              {hasBet && (
+                <button
+                  disabled={isPending || saveStatus === 'saving'}
+                  onClick={handleDelete}
+                  className="w-full py-4 rounded-sm font-black uppercase italic tracking-tighter text-red-600 border border-red-600/20 hover:border-red-600/50 hover:bg-red-600/10 transition-all active:scale-95"
+                >
+                  Deletar Aposta
+                </button>
+              )}
+            </>
           )}
         </>
       )}

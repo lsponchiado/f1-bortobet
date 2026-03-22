@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useTransition, useRef, useEffect } from 'react';
-import { Pencil, X, CheckCircle, XCircle, Eye, EyeOff } from 'lucide-react';
+import { Pencil, X, CheckCircle, XCircle, Eye, EyeOff, UserRound } from 'lucide-react';
 import { updateName, updateEmail, updateUsername, updatePassword } from '@/lib/actions';
 
 // ── Modal base ────────────────────────────────────────────────────────────────
@@ -179,10 +179,19 @@ export function ProfileClient({ name, email, username }: { name: string; email: 
     <>
       <div className="bg-[#1f1f27] rounded-3xl border border-white/5 overflow-hidden shadow-xl">
         <div className="h-1 w-full bg-[#e10600]" />
+        <div className="p-6 border-b border-white/5 flex items-center gap-4">
+          <div className="w-10 h-10 rounded-2xl bg-white/5 flex items-center justify-center shrink-0">
+            <UserRound className="w-5 h-5 text-[#e10600]" />
+          </div>
+          <div>
+            <h3 className="font-black uppercase italic tracking-tight text-white">Dados Pessoais</h3>
+            <p className="text-gray-500 text-xs font-bold mt-0.5">Gerencie suas informações de conta</p>
+          </div>
+        </div>
         <div className="px-6 py-2">
           <FieldRow label="Nome"     value={name}     onEdit={() => setOpen('name')}     />
           <FieldRow label="E-mail"   value={email}    onEdit={() => setOpen('email')}    />
-          <FieldRow label="Username" value={`@${username}`} onEdit={() => setOpen('username')} />
+          <FieldRow label="Username" value={username} onEdit={() => setOpen('username')} />
           <FieldRow label="Senha"    value="••••••••" onEdit={() => setOpen('password')} />
         </div>
       </div>

@@ -12,7 +12,7 @@ const variantClass: Record<CardVariant, string> = {
   purple: 'bg-purple-700',
 };
 
-export default function GridCard({ driver, variant = 'default' }: GridCardProps) {
+export function GridCard({ driver, variant = 'default' }: GridCardProps) {
   // Verifica se está vazio ou se é o placeholder (id < 0)
   const isEmpty = !driver || driver.id < 0;
 

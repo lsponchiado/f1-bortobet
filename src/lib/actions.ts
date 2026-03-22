@@ -8,7 +8,7 @@ import { revalidatePath } from "next/cache";
 
 // --- REGISTRO E LOGIN ---
 
-export async function registerUser(prevState: any, formData: FormData) {
+export async function registerUser(prevState: unknown, formData: FormData) {
   const name = formData.get("name") as string;
   const username = formData.get("username") as string;
   const email = formData.get("email") as string;
@@ -65,7 +65,7 @@ export async function registerUser(prevState: any, formData: FormData) {
   redirect("/");
 }
 
-export async function loginUser(prevState: any, formData: FormData) {
+export async function loginUser(prevState: unknown, formData: FormData) {
   const identifier = formData.get("identifier")?.toString();
   const password = formData.get("password")?.toString();
 
@@ -182,6 +182,58 @@ export async function saveRaceBet(data: {
   }
 }
 
+// --- DELETAR APOSTA DA CORRIDA ---
+
+export async function deleteRaceBet(data: { sessionId: number; targetUserId?: number }) {
+  const session = await auth();
+  if (!session?.user?.id) throw new Error("Não autorizado");
+
+  const isAdmin = session.user.role === 'ADMIN';
+  const userId = isAdmin && data.targetUserId ? data.targetUserId : parseInt(session.user.id, 10);
+
+  try {
+    const bet = await prisma.betRace.findFirst({ where: { userId, sessionId: data.sessionId } });
+    if (!bet) return { error: "Nenhuma aposta encontrada." };
+
+    await prisma.$transaction(async (tx) => {
+      await tx.betRaceGridItem.deleteMany({ where: { betId: bet.id } });
+      await tx.betRace.delete({ where: { id: bet.id } });
+    });
+
+    revalidatePath("/");
+    return { success: true };
+  } catch (error) {
+    console.error(error);
+    return { error: "Erro ao deletar aposta da corrida." };
+  }
+}
+
+// --- DELETAR APOSTA DA SPRINT ---
+
+export async function deleteSprintBet(data: { sessionId: number; targetUserId?: number }) {
+  const session = await auth();
+  if (!session?.user?.id) throw new Error("Não autorizado");
+
+  const isAdmin = session.user.role === 'ADMIN';
+  const userId = isAdmin && data.targetUserId ? data.targetUserId : parseInt(session.user.id, 10);
+
+  try {
+    const bet = await prisma.betSprint.findFirst({ where: { userId, sessionId: data.sessionId } });
+    if (!bet) return { error: "Nenhuma aposta encontrada." };
+
+    await prisma.$transaction(async (tx) => {
+      await tx.betSprintGridItem.deleteMany({ where: { betId: bet.id } });
+      await tx.betSprint.delete({ where: { id: bet.id } });
+    });
+
+    revalidatePath("/");
+    return { success: true };
+  } catch (error) {
+    console.error(error);
+    return { error: "Erro ao deletar aposta da sprint." };
+  }
+}
+
 // --- APOSTA DA SPRINT (TOP 8) ---
 
 export async function saveSprintBet(data: {
@@ -223,5 +275,77 @@ export async function saveSprintBet(data: {
   } catch (error) {
     console.error(error);
     return { error: "Erro ao salvar aposta da sprint." };
+  }
+}
+
+// --- BACKUP BETS ---
+
+export async function saveBackupRaceBet(data: {
+  gridIds: number[];
+  fastestLapId: number | null;
+  predictedSC: number;
+  predictedDNF: number;
+}) {
+  const userId = await getAuthUserId();
+
+  try {
+    await prisma.backupRaceBet.upsert({
+      where: { userId },
+      update: {
+        gridIds: data.gridIds,
+        fastestLapId: data.fastestLapId,
+        predictedSC: data.predictedSC,
+        predictedDNF: data.predictedDNF,
+      },
+      create: {
+        userId,
+        gridIds: data.gridIds,
+        fastestLapId: data.fastestLapId,
+        predictedSC: data.predictedSC,
+        predictedDNF: data.predictedDNF,
+      },
+    });
+
+    revalidatePath("/perfil");
+    return { success: true };
+  } catch (error) {
+    console.error(error);
+    return { error: "Erro ao salvar backup da corrida." };
+  }
+}
+
+export async function saveBackupSprintBet(data: { gridIds: number[] }) {
+  const userId = await getAuthUserId();
+
+  try {
+    await prisma.backupSprintBet.upsert({
+      where: { userId },
+      update: { gridIds: data.gridIds },
+      create: { userId, gridIds: data.gridIds },
+    });
+
+    revalidatePath("/perfil");
+    return { success: true };
+  } catch (error) {
+    console.error(error);
+    return { error: "Erro ao salvar backup da sprint." };
+  }
+}
+
+export async function deleteBackupBet(type: 'race' | 'sprint') {
+  const userId = await getAuthUserId();
+
+  try {
+    if (type === 'race') {
+      await prisma.backupRaceBet.deleteMany({ where: { userId } });
+    } else {
+      await prisma.backupSprintBet.deleteMany({ where: { userId } });
+    }
+
+    revalidatePath("/perfil");
+    return { success: true };
+  } catch (error) {
+    console.error(error);
+    return { error: "Erro ao deletar backup." };
   }
 }

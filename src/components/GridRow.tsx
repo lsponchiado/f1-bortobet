@@ -1,6 +1,6 @@
 import { memo, useMemo } from 'react';
 import { GridPosition } from './GridPosition';
-import GridCard from './GridCard';
+import { GridCard } from './GridCard';
 import { GridDropdown } from './GridDropdown';
 import { GridDelta } from './GridDelta';
 import { GridBadges } from './GridBadges';
@@ -57,4 +57,4 @@ const GridRow = memo(function GridRow({
   );
 });
 
-export default GridRow;
+export { GridRow };

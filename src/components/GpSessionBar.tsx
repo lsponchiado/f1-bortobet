@@ -3,16 +3,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { ChevronDown } from 'lucide-react';
-
-const SESSION_LABELS: Record<string, string> = {
-  PRACTICE_1: 'Treino Livre 1',
-  PRACTICE_2: 'Treino Livre 2',
-  PRACTICE_3: 'Treino Livre 3',
-  SPRINT_QUALIFYING: 'Class. Sprint',
-  QUALIFYING: 'Classificação',
-  SPRINT: 'Sprint',
-  RACE: 'Corrida',
-};
+import { SESSION_LABELS, type SessionType } from '@/lib/constants';
 
 interface GpOption {
   id: number;
@@ -105,7 +96,7 @@ export function GpSessionBar({
             onClick={() => setSessionMenuOpen(!sessionMenuOpen)}
             className="flex items-center gap-2 bg-[#1f1f27] border border-white/5 rounded-xl px-4 py-3 text-xs font-black uppercase italic tracking-wider text-white transition-all"
           >
-            {SESSION_LABELS[activeSession?.type ?? ''] || 'Sessões'}
+            {SESSION_LABELS[activeSession?.type as SessionType] || 'Sessões'}
             <ChevronDown size={16} className={`transition-transform duration-300 ${sessionMenuOpen ? 'rotate-180' : ''}`} />
           </button>
 
@@ -123,7 +114,7 @@ export function GpSessionBar({
                         : 'text-gray-400 hover:bg-white/5 hover:text-white'
                     }`}
                   >
-                    {SESSION_LABELS[s.type] || s.type}
+                    {SESSION_LABELS[s.type as SessionType] || s.type}
                   </button>
                 );
               })}

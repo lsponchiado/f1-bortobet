@@ -1,14 +1,7 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-type SessionType =
-  | 'PRACTICE_1'
-  | 'PRACTICE_2'
-  | 'PRACTICE_3'
-  | 'SPRINT_QUALIFYING'
-  | 'QUALIFYING'
-  | 'SPRINT'
-  | 'RACE';
+import { SESSION_LABELS, SESSION_LABELS_SHORT, type SessionType } from '@/lib/constants';
 
 interface SessionInfo {
   type: SessionType;
@@ -24,36 +17,6 @@ interface GpPanelProps {
   sessions: SessionInfo[];
   gpId: number;
 }
-
-const SESSION_LABELS: Record<SessionType, string> = {
-  PRACTICE_1: 'Treino Livre 1',
-  PRACTICE_2: 'Treino Livre 2',
-  PRACTICE_3: 'Treino Livre 3',
-  SPRINT_QUALIFYING: 'Classificação Sprint',
-  QUALIFYING: 'Classificação',
-  SPRINT: 'Sprint',
-  RACE: 'Corrida',
-};
-
-const SESSION_LABELS_SHORT: Record<SessionType, string> = {
-  PRACTICE_1: 'TL 1',
-  PRACTICE_2: 'TL 2',
-  PRACTICE_3: 'TL 3',
-  SPRINT_QUALIFYING: 'Spr. class.',
-  QUALIFYING: 'Class.',
-  SPRINT: 'Sprint',
-  RACE: 'Corrida',
-};
-
-const SESSION_ORDER: SessionType[] = [
-  'PRACTICE_1',
-  'PRACTICE_2',
-  'SPRINT_QUALIFYING',
-  'PRACTICE_3',
-  'QUALIFYING',
-  'SPRINT',
-  'RACE',
-];
 
 export function GpPanel({
   eventName,

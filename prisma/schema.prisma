@@ -68,6 +68,8 @@ model User {
   betRaceResults    BetRaceResult[]
   betSprintResults  BetSprintResult[]
   inviteCode        InviteCode?
+  backupRace        BackupRaceBet?
+  backupSprint      BackupSprintBet?
 }
 
 model Season {
@@ -294,6 +296,23 @@ view BetSprintResult {
 
   @@unique([betId])
   @@map("bet_sprint_results_view")
+}
+
+model BackupRaceBet {
+  id            Int     @id @default(autoincrement())
+  userId        Int     @unique
+  gridIds       Int[]
+  fastestLapId  Int?
+  predictedSC   Int     @default(0)
+  predictedDNF  Int     @default(0)
+  user          User    @relation(fields: [userId], references: [id])
+}
+
+model BackupSprintBet {
+  id        Int     @id @default(autoincrement())
+  userId    Int     @unique
+  gridIds   Int[]
+  user      User    @relation(fields: [userId], references: [id])
 }
 
 model InviteCode {

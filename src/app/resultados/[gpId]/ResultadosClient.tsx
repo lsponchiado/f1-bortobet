@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import Grid from '@/components/Grid';
+import { Grid } from '@/components/Grid';
 import { GpSessionBar } from '@/components/GpSessionBar';
 import type { GridRowData, CardVariant } from '@/types/grid';
 
@@ -63,7 +63,7 @@ function entryToRowData(entry: SessionEntry, position: number): GridRowData {
   };
 }
 
-export default function ResultadosClient({ sessions, gpName, currentGpId, allGps }: ResultadosClientProps) {
+export function ResultadosClient({ sessions, gpName, currentGpId, allGps }: ResultadosClientProps) {
   const sessionsWithEntries = sessions
     .filter(s => !s.cancelled && s.entries.length > 0)
     .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());

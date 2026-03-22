@@ -2,9 +2,10 @@
 
 import { useState, useRef, useCallback, useMemo, useTransition } from 'react';
 import { X, Loader2, Camera } from 'lucide-react';
-import { RankingFilterBar, type RankingGpOption } from '@/components/RankingFilterBar';
-import { RankingTable, type RankingEntry } from '@/components/RankingTable';
-import { getUserBetForGp, type UserBetData, type BetGridItem } from '@/lib/admin-actions';
+import { RankingFilterBar, type RankingGpOption } from './RankingFilterBar';
+import { RankingTable, type RankingEntry } from './RankingTable';
+import { getUserBetForGp } from '@/lib/admin-actions';
+import type { UserBetData, BetGridItem } from '@/lib/constants';
 
 export interface ScoreRow {
   userId: number;
@@ -176,7 +177,7 @@ function BetDetailModal({ username, betData, onClose }: {
 
 // ── Main Component ────────────────────────────────────────────────────────────
 
-export default function RankingClient({ scores, gpOptions, earnings }: RankingClientProps) {
+export function RankingClient({ scores, gpOptions, earnings }: RankingClientProps) {
   const [selectedGpId, setSelectedGpId] = useState<number | null>(null);
   const [betModal, setBetModal] = useState<{ username: string; data: UserBetData } | null>(null);
   const [isPending, startTransition] = useTransition();

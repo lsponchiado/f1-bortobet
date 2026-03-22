@@ -41,7 +41,7 @@ const CONFIG_DEFAULTS: SeasonConfigInput = {
 
 function fmt(v: number) { return `R$ ${v.toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`; }
 
-function SeasonConfigPanel({ initialConfig, strollCount, totalGps, cancelledGps }: { initialConfig: any; strollCount: number; totalGps: number; cancelledGps: number }) {
+function SeasonConfigPanel({ initialConfig, strollCount, totalGps, cancelledGps }: { initialConfig: Partial<SeasonConfigInput> | null; strollCount: number; totalGps: number; cancelledGps: number }) {
   const init: SeasonConfigInput = { ...CONFIG_DEFAULTS, ...(initialConfig ?? {}) };
   const [cfg, setCfg] = useState<SeasonConfigInput>(init);
   const [isPending, startTransition] = useTransition();
@@ -68,7 +68,7 @@ function SeasonConfigPanel({ initialConfig, strollCount, totalGps, cancelledGps 
             {([1,2,3,4,5,6,7,8,9,10] as const).map(p => (
               <div key={p} className="flex flex-col items-center gap-1">
                 <span className="text-[10px] font-black text-gray-600 uppercase">P{p}</span>
-                <NumInput value={(cfg as any)[`ptsP${p}`]} onChange={v => set(`ptsP${p}` as any, v)} />
+                <NumInput value={cfg[`ptsP${p}` as keyof SeasonConfigInput] as number} onChange={v => set(`ptsP${p}` as keyof SeasonConfigInput, v)} />
               </div>
             ))}
           </div>
@@ -79,7 +79,7 @@ function SeasonConfigPanel({ initialConfig, strollCount, totalGps, cancelledGps 
             {([1,2,3,4,5,6,7,8] as const).map(p => (
               <div key={p} className="flex flex-col items-center gap-1">
                 <span className="text-[10px] font-black text-gray-600 uppercase">P{p}</span>
-                <NumInput value={(cfg as any)[`sprintPtsP${p}`]} onChange={v => set(`sprintPtsP${p}` as any, v)} />
+                <NumInput value={cfg[`sprintPtsP${p}` as keyof SeasonConfigInput] as number} onChange={v => set(`sprintPtsP${p}` as keyof SeasonConfigInput, v)} />
               </div>
             ))}
           </div>
@@ -202,7 +202,7 @@ function SeasonConfigPanel({ initialConfig, strollCount, totalGps, cancelledGps 
 
 
 type ConfigData = {
-  season: { id: number; year: number; config: any } | null;
+  season: { id: number; year: number; config: Partial<SeasonConfigInput> | null } | null;
   raceSessions: RaceSession[];
 };
 

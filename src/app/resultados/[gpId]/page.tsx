@@ -2,7 +2,7 @@ import { auth } from '@/auth';
 import { prisma } from '@/lib/prisma';
 import { redirect } from 'next/navigation';
 import { Navbar } from '@/components/Navbar';
-import ResultadosClient from './ResultadosClient';
+import { ResultadosClient } from './ResultadosClient';
 
 export default async function ResultadosPage({ params }: { params: Promise<{ gpId: string }> }) {
   const session = await auth();

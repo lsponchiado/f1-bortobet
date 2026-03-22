@@ -1,7 +1,7 @@
 // src/components/BetExtrasPanel.tsx
 import { useMemo } from 'react';
-import { Timer, ShieldAlert, Ban, ChevronDown } from 'lucide-react';
-import GridCard from './GridCard';
+import { Timer, ShieldAlert, Ban, ChevronDown, ChevronsUp } from 'lucide-react';
+import { GridCard } from './GridCard';
 import type { GridDriver } from '../types/grid';
 
 interface BetExtrasPanelProps {
@@ -13,6 +13,10 @@ interface BetExtrasPanelProps {
   onSCChange: (n: number) => void;
   predictedDNF: number;
   onDNFChange: (n: number) => void;
+  doublePoints: boolean;
+  onDoublePointsChange: (v: boolean) => void;
+  doublePointsRemaining: number;
+  hideDoublePoints?: boolean;
 }
 
 const SC_DNF_OPTIONS = [0, 1, 2, 3];
@@ -26,6 +30,10 @@ export function BetExtrasPanel({
   onSCChange,
   predictedDNF,
   onDNFChange,
+  doublePoints,
+  onDoublePointsChange,
+  doublePointsRemaining,
+  hideDoublePoints,
 }: BetExtrasPanelProps) {
   const selectedFastestLapDriver: GridDriver = useMemo(() => {
     if (!fastestLapId) return { id: -1, lastName: '???', code: '???', number: 0, headshotUrl: null, team: { name: '', color: '#333', logoUrl: null } };
@@ -129,6 +137,33 @@ export function BetExtrasPanel({
           ))}
         </div>
       </div>
+
+      {/* Double Points */}
+      {!hideDoublePoints && (
+        <div className="flex w-full flex-row items-center gap-1 sm:gap-2 overflow-visible">
+          <div className="flex h-16 w-12 shrink-0 items-center justify-center rounded-sm text-white shadow-lg" style={{ backgroundColor: '#2563eb' }}>
+            <ChevronsUp size={22} />
+          </div>
+
+          <button
+            disabled={!isEditable || (!doublePoints && doublePointsRemaining <= 0)}
+            onClick={() => onDoublePointsChange(!doublePoints)}
+            className={`flex flex-1 h-16 items-center justify-between px-4 rounded-sm font-black uppercase italic tracking-tight text-sm transition-all border shadow-lg ${
+              !doublePoints
+                ? !isEditable || doublePointsRemaining <= 0
+                  ? 'bg-gray-700 text-gray-500 border-white/5 cursor-not-allowed'
+                  : 'bg-gray-700 text-gray-400 border-white/5 hover:text-white cursor-pointer'
+                : ''
+            }`}
+            style={doublePoints ? { backgroundColor: '#3b82f6', color: '#fff', borderColor: '#60a5fa', boxShadow: '0 0 10px rgba(59,130,246,0.3)' } : undefined}
+          >
+            <span>Double Points</span>
+            <span className={`text-xs font-bold tracking-wider ${doublePoints ? 'text-white/60' : 'text-gray-500'}`}>
+              {doublePointsRemaining} restante{doublePointsRemaining !== 1 ? 's' : ''}
+            </span>
+          </button>
+        </div>
+      )}
     </div>
   );
 }

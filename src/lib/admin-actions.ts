@@ -4,6 +4,8 @@ import { auth } from '@/auth';
 import { redirect } from 'next/navigation';
 import { randomBytes } from 'crypto';
 import { prisma } from '@/lib/prisma';
+import type { BetGridItem, UserBetData } from '@/lib/constants';
+export type { BetGridItem, UserBetData } from '@/lib/constants';
 
 async function requireAdmin() {
   const session = await auth();
@@ -99,43 +101,6 @@ export async function saveRaceConfig(sessionId: number, data: RaceConfigInput) {
 }
 
 // ── Ranking: bet details ─────────────────────────────────────────────────────
-
-export interface BetGridItem {
-  position: number;
-  driverId: number;
-  lastName: string;
-  code: string;
-  number: number;
-  headshotUrl: string | null;
-  team: { name: string; color: string; logoUrl: string | null };
-  fastestLap: boolean;
-}
-
-export interface UserBetData {
-  race: {
-    grid: BetGridItem[];
-    predictedSC: number;
-    predictedDNF: number;
-    doublePoints: boolean;
-    result: {
-      somaPos: number[];
-      hailMary: number[];
-      underdog: number[];
-      freefall: number[];
-      fastestLap: number;
-      safetyCar: number;
-      abandonos: number;
-      somaTotal: number;
-    } | null;
-  } | null;
-  sprint: {
-    grid: BetGridItem[];
-    result: {
-      somaPos: number[];
-      somaTotal: number;
-    } | null;
-  } | null;
-}
 
 export async function getUserBetForGp(userId: number, grandPrixId: number): Promise<UserBetData> {
   const session = await auth();
@@ -283,8 +248,8 @@ export async function createBackup(): Promise<{ success: boolean; data?: string;
     };
 
     return { success: true, data: JSON.stringify(backup, null, 2) };
-  } catch (e: any) {
-    return { success: false, error: e.message || 'Erro ao gerar backup' };
+  } catch (e: unknown) {
+    return { success: false, error: e instanceof Error ? e.message : 'Erro ao gerar backup' };
   }
 }
 
@@ -346,7 +311,7 @@ export async function restoreBackup(json: string): Promise<{ success: boolean; e
     }, { timeout: 120_000 });
 
     return { success: true };
-  } catch (e: any) {
-    return { success: false, error: e.message || 'Erro ao restaurar backup' };
+  } catch (e: unknown) {
+    return { success: false, error: e instanceof Error ? e.message : 'Erro ao restaurar backup' };
   }
 }

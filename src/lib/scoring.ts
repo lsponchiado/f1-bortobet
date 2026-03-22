@@ -136,7 +136,7 @@ async function _calculateScores(filters: ScoringFilters): Promise<ScoringResult>
             predictedGrid: { select: { driverId: true, predictedPosition: true, fastestLap: true } },
           },
         })
-      : Promise.resolve([] as any[]),
+      : Promise.resolve([]),
     sprintSessionIds.length
       ? prisma.betSprint.findMany({
           where: { sessionId: { in: sprintSessionIds }, ...userFilter },
@@ -145,7 +145,7 @@ async function _calculateScores(filters: ScoringFilters): Promise<ScoringResult>
             predictedGrid: { select: { driverId: true, predictedPosition: true } },
           },
         })
-      : Promise.resolve([] as any[]),
+      : Promise.resolve([]),
   ]);
 
   // 5. Accumulate points per user per GP

@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma';
 import { redirect } from 'next/navigation';
 import { Navbar } from '@/components/Navbar';
 import { ProfileClient } from './ProfileClient';
+import { BackupBetPanel } from './BackupBetPanel';
 
 export default async function PerfilPage() {
   const session = await auth();
@@ -18,12 +19,42 @@ export default async function PerfilPage() {
 
   const displayUsername = session.user.username || session.user.name || 'User';
 
+  const allDrivers = await prisma.driver.findMany({
+    where: { enabled: true },
+    orderBy: { teamId: 'asc' },
+    include: { team: true },
+  });
+
+  const serializedDrivers = allDrivers.map(d => ({
+    id: d.id,
+    lastName: d.lastName,
+    code: d.code,
+    number: d.number,
+    headshotUrl: d.headshotUrl,
+    team: { name: d.team.name, color: d.team.color, logoUrl: d.team.logoUrl },
+  }));
+
+  const backupRace = await prisma.backupRaceBet.findUnique({ where: { userId } });
+  const backupSprint = await prisma.backupSprintBet.findUnique({ where: { userId } });
+
   return (
     <div className="min-h-screen bg-[#050505]">
       <Navbar username={displayUsername} isAdmin={session.user.role === 'ADMIN'} />
       <main className="pt-6 pb-40 md:pb-12 px-6 lg:px-12 flex flex-col items-center">
-        <div className="w-full max-w-2xl">
+        <div className="w-full max-w-2xl space-y-8">
           <ProfileClient name={user.name} email={user.email} username={user.username} />
+          <BackupBetPanel
+            allDrivers={serializedDrivers}
+            backupRace={backupRace ? {
+              gridIds: backupRace.gridIds,
+              fastestLapId: backupRace.fastestLapId,
+              predictedSC: backupRace.predictedSC,
+              predictedDNF: backupRace.predictedDNF,
+            } : null}
+            backupSprint={backupSprint ? {
+              gridIds: backupSprint.gridIds,
+            } : null}
+          />
         </div>
       </main>
     </div>

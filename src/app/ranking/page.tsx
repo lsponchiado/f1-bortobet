@@ -2,8 +2,8 @@ import { auth } from '@/auth';
 import { prisma } from '@/lib/prisma';
 import { redirect } from 'next/navigation';
 import { Navbar } from '@/components/Navbar';
-import RankingClient, { type ScoreRow, type EarningRow } from './RankingClient';
-import type { RankingGpOption } from '@/components/RankingFilterBar';
+import { RankingClient, type ScoreRow, type EarningRow } from './RankingClient';
+import type { RankingGpOption } from './RankingFilterBar';
 
 export default async function RankingPage() {
   const session = await auth();

@@ -1,7 +1,7 @@
 import { redirect } from 'next/navigation';
 import { auth } from '@/auth';
 import { prisma } from '@/lib/prisma';
-import ApostasClient from './ApostasClient';
+import { ApostasClient } from './ApostasClient';
 import { Navbar } from '@/components/Navbar';
 
 export default async function ApostasPage({ params, searchParams }: { params: Promise<{ gpId: string }>; searchParams: Promise<{ asUser?: string }> }) {
@@ -41,23 +41,23 @@ export default async function ApostasPage({ params, searchParams }: { params: Pr
   });
   if (!gp) redirect('/');
 
-  // All GPs with sessions in active season, ordered by earliest session date
+  // All GPs with sessions in active season, ordered by earliest session date (single query)
   const allGpsRaw = await prisma.grandPrix.findMany({
     where: { sessions: { some: { seasonId: activeSeason.id } } },
-    select: { id: true, name: true, country: true },
-  });
-  const gpsWithDate = await Promise.all(
-    allGpsRaw.map(async (g) => {
-      const first = await prisma.session.findFirst({
-        where: { grandPrixId: g.id, seasonId: activeSeason.id },
+    select: {
+      id: true,
+      name: true,
+      country: true,
+      sessions: {
+        where: { seasonId: activeSeason.id },
         orderBy: { date: 'asc' },
+        take: 1,
         select: { date: true },
-      });
-      return { ...g, firstDate: first?.date ?? new Date() };
-    })
-  );
-  gpsWithDate.sort((a, b) => a.firstDate.getTime() - b.firstDate.getTime());
-  const allGps = gpsWithDate.map(g => ({ id: g.id, name: g.name, country: g.country }));
+      },
+    },
+  });
+  allGpsRaw.sort((a, b) => (a.sessions[0]?.date.getTime() ?? 0) - (b.sessions[0]?.date.getTime() ?? 0));
+  const allGps = allGpsRaw.map(g => ({ id: g.id, name: g.name, country: g.country }));
 
   const allDrivers = await prisma.driver.findMany({
     where: { enabled: true },
@@ -157,15 +157,26 @@ export default async function ApostasPage({ params, searchParams }: { params: Pr
     }
   }
 
+  // Count double points tokens used this season
+  const doublePointsUsed = await prisma.betRace.count({
+    where: {
+      userId,
+      doublePoints: true,
+      session: { seasonId: activeSeason.id },
+    },
+  });
+  const doublePointsTotal = activeSeason.config?.doublePointsTokens ?? 3;
+  const doublePointsRemaining = doublePointsTotal - doublePointsUsed;
+
   // Serialize sessions for the client
   const serializedSessions = gp.sessions.map(s => ({
     id: s.id,
-    type: s.type as string,
+    type: s.type,
     date: s.date.toISOString(),
     cancelled: s.cancelled,
     hasEntries: s.entries.length > 0,
     scCount: s.scCount,
-    vscCount: (s as any).vscCount ?? 0,
+    vscCount: s.vscCount,
     raceConfig: s.raceConfig,
     entries: s.entries.map(e => ({
       driverId: e.driverId,
@@ -201,10 +212,9 @@ export default async function ApostasPage({ params, searchParams }: { params: Pr
           existingBets={{ race: existingRaceBet, sprint: existingSprintBet }}
           betResults={{ race: raceResult, sprint: sprintResult }}
           qualifyingResults={qualifyingResults}
-          seasonConfig={activeSeason.config}
           isAdmin={isAdmin}
           currentUserId={userId}
-          allUsers={[]}
+          doublePointsRemaining={doublePointsRemaining}
         />
       </main>
     </div>
