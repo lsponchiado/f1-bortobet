@@ -23,12 +23,14 @@ dotenv.config({ path: path.resolve(__dirname, '../../.env') });
 
 import { MongoClient, type Db } from 'mongodb';
 import { PrismaClient } from '@prisma/client';
+import { Pool } from 'pg';
+import { PrismaPg } from '@prisma/adapter-pg';
 import mqtt from 'mqtt';
 import { applyBackupsForSession } from './backups.js';
 
-const prisma = new PrismaClient({
-  datasources: { db: { url: process.env.DATABASE_URL } },
-});
+const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+const adapter = new PrismaPg(pool);
+const prisma = new PrismaClient({ adapter });
 
 const MONGO_URI = process.env.OPENF1_MONGO_URI || 'mongodb://localhost:27017';
 const MONGO_DB = process.env.OPENF1_MONGO_DB || 'openf1';
