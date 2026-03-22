@@ -9,6 +9,7 @@ import {
 import { RoundConfigPanel, type RaceSession } from './RoundConfigPanel';
 import { InvitePanel } from './InvitePanel';
 import { BackupPanel } from './BackupPanel';
+import { ResyncPanel } from './ResyncPanel';
 
 function NumInput({ value, onChange }: { value: number; onChange: (v: number) => void }) {
   return (
@@ -301,7 +302,9 @@ function UserBypassPanel({ users }: { users: UserOption[] }) {
   );
 }
 
-export function AdminClient({ configData, allUsers, strollCount, totalGps, cancelledGps: initialCancelledGps }: { configData: ConfigData; allUsers: UserOption[]; strollCount: number; totalGps: number; cancelledGps: number }) {
+type ResyncSession = { id: number; type: string; round: number; date: string; gpName: string; openf1Key: number };
+
+export function AdminClient({ configData, allUsers, strollCount, totalGps, cancelledGps: initialCancelledGps, resyncSessions }: { configData: ConfigData; allUsers: UserOption[]; strollCount: number; totalGps: number; cancelledGps: number; resyncSessions: ResyncSession[] }) {
   const [cancelledGps, setCancelledGps] = useState(initialCancelledGps);
 
   const handleCancelledChange = (delta: number) => {
@@ -314,6 +317,7 @@ export function AdminClient({ configData, allUsers, strollCount, totalGps, cance
       <UserBypassPanel users={allUsers} />
       <SeasonConfigPanel initialConfig={configData.season?.config ?? null} strollCount={strollCount} totalGps={totalGps} cancelledGps={cancelledGps} />
       <RoundConfigPanel  raceSessions={configData.raceSessions} onCancelledChange={handleCancelledChange} />
+      <ResyncPanel sessions={resyncSessions} />
       <InvitePanel />
       <BackupPanel />
     </div>

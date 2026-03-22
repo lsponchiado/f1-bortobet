@@ -197,6 +197,9 @@ model SessionEntry {
   dnf            Boolean @default(false)
   dsq            Boolean @default(false)
   fastestLap     Boolean @default(false)
+  bestLapTime    Float?
+  gapToLeader    Float?
+  interval       Float?
   session        Session @relation(fields: [sessionId], references: [id])
   driver         Driver  @relation(fields: [driverId], references: [id])
   team           Team    @relation(fields: [teamId], references: [id])

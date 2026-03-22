@@ -211,6 +211,7 @@ export function ApostasClient(props: ApostasClientProps) {
 
   const isGridComplete = rows.every(r => r.driver.id > 0);
   const isGridEmpty = rows.every(r => r.driver.id <= 0);
+  const canSave = isGridComplete && (!isRace || !!fastestLapId);
 
   const hasQualiResults = Object.keys(qualiMap).length > 0;
 
@@ -266,6 +267,7 @@ export function ApostasClient(props: ApostasClientProps) {
 
   const handleSave = () => {
     if (!activeSession || !isGridComplete) return;
+    if (isRace && !fastestLapId) return;
 
     setSaveStatus('saving');
     startTransition(async () => {
@@ -376,11 +378,11 @@ export function ApostasClient(props: ApostasClientProps) {
           {isEditable && (
             <>
               <button
-                disabled={!isGridComplete || isPending || saveStatus === 'saving'}
+                disabled={!canSave || isPending || saveStatus === 'saving'}
                 className={`w-full py-4 rounded-sm font-black uppercase italic tracking-tighter transition-all shadow-xl ${
                   saveStatus === 'saved'
                     ? 'bg-green-600 text-white cursor-default'
-                    : isGridComplete && saveStatus !== 'saving'
+                    : canSave && saveStatus !== 'saving'
                       ? 'bg-red-600 text-white hover:bg-red-700 active:scale-95 cursor-pointer'
                       : 'bg-gray-800 text-gray-600 cursor-not-allowed'
                 }`}

@@ -106,8 +106,19 @@ export async function getUserBetForGp(userId: number, grandPrixId: number): Prom
   const session = await auth();
   if (!session?.user?.id) redirect('/login');
 
+  const callerId = parseInt(session.user.id, 10);
+  const isAdmin = session.user.role === 'ADMIN';
+
+  // Só permite ver apostas alheias se a sessão já começou (ou se é admin)
+  const now = new Date();
+  const isSelf = callerId === userId;
+
   const sessions = await prisma.session.findMany({
-    where: { grandPrixId, type: { in: ['RACE', 'SPRINT'] } },
+    where: {
+      grandPrixId,
+      type: { in: ['RACE', 'SPRINT'] },
+      ...(!isSelf && !isAdmin ? { date: { lte: now } } : {}),
+    },
     select: { id: true, type: true },
   });
 
@@ -211,6 +222,138 @@ export async function generateInviteCode(category: 'HAAS' | 'STROLL'): Promise<{
   return { success: false, error: 'Não foi possível gerar um código único' };
 }
 
+// ── Re-sync de resultados via OpenF1 ─────────────────────────────────────────
+
+export async function resyncSessionResults(sessionId: number): Promise<{ success: boolean; error?: string }> {
+  await requireAdmin();
+
+  const session = await prisma.session.findUnique({
+    where: { id: sessionId },
+    select: { id: true, openf1Key: true, type: true, grandPrix: { select: { name: true } } },
+  });
+
+  if (!session) return { success: false, error: 'Sessão não encontrada' };
+  if (!session.openf1Key) return { success: false, error: 'Sessão sem openf1Key mapeado' };
+
+  try {
+    // Busca resultados da API REST do OpenF1
+    const baseUrl = process.env.OPENF1_API_URL || 'https://api.openf1.org';
+
+    const [resultsRes, gridRes, lapsRes, rcRes] = await Promise.all([
+      fetch(`${baseUrl}/v1/session_result?session_key=${session.openf1Key}`),
+      fetch(`${baseUrl}/v1/starting_grid?session_key=${session.openf1Key}`),
+      fetch(`${baseUrl}/v1/laps?session_key=${session.openf1Key}`),
+      fetch(`${baseUrl}/v1/race_control?session_key=${session.openf1Key}&category=SafetyCar`),
+    ]);
+
+    const [results, grid, laps, rcMsgs] = await Promise.all([
+      resultsRes.json() as Promise<Array<{ driver_number: number; position: number | null; points: number; dnf?: boolean; dns?: boolean; dsq?: boolean }>>,
+      gridRes.json() as Promise<Array<{ driver_number: number; position: number | null }>>,
+      lapsRes.json() as Promise<Array<{ driver_number: number; lap_duration: number | null }>>,
+      rcRes.json() as Promise<Array<{ message: string }>>,
+    ]);
+
+    if (!Array.isArray(results) || results.length === 0) {
+      return { success: false, error: 'Sem resultados na OpenF1 para esta sessão' };
+    }
+
+    // Starting grid
+    const startPositionMap = new Map<number, number>();
+    for (const g of grid) {
+      if (g.driver_number && g.position) startPositionMap.set(g.driver_number, g.position);
+    }
+
+    // Fastest lap
+    const validLaps = laps.filter(l => l.lap_duration != null);
+    validLaps.sort((a, b) => a.lap_duration! - b.lap_duration!);
+    const fastestLapDriverNumber = validLaps[0]?.driver_number || null;
+
+    // Safety cars
+    const scCount = rcMsgs.filter(m =>
+      m.message?.toLowerCase().includes('deployed') &&
+      !m.message?.toLowerCase().includes('virtual')
+    ).length;
+    const vscCount = rcMsgs.filter(m =>
+      m.message?.toLowerCase().includes('virtual') &&
+      m.message?.toLowerCase().includes('deployed')
+    ).length;
+
+    // Atualizar SC/VSC na sessão
+    await prisma.session.update({
+      where: { id: session.id },
+      data: { scCount, vscCount },
+    });
+
+    // Mapear drivers
+    const allDrivers = await prisma.driver.findMany();
+    const driverByNumber = new Map(allDrivers.map(d => [d.number, d]));
+
+    let synced = 0;
+    for (const r of results) {
+      const driver = driverByNumber.get(r.driver_number);
+      if (!driver) continue;
+
+      await prisma.sessionEntry.upsert({
+        where: { sessionId_driverId: { sessionId: session.id, driverId: driver.id } },
+        update: {
+          startPosition: startPositionMap.get(r.driver_number) ?? 99,
+          finishPosition: r.position ?? 99,
+          points: r.points ?? 0,
+          dnf: r.dnf === true,
+          dns: r.dns === true,
+          dsq: r.dsq === true,
+          fastestLap: r.driver_number === fastestLapDriverNumber,
+          teamId: driver.teamId,
+        },
+        create: {
+          sessionId: session.id,
+          driverId: driver.id,
+          teamId: driver.teamId,
+          startPosition: startPositionMap.get(r.driver_number) ?? 99,
+          finishPosition: r.position ?? 99,
+          points: r.points ?? 0,
+          dnf: r.dnf === true,
+          dns: r.dns === true,
+          dsq: r.dsq === true,
+          fastestLap: r.driver_number === fastestLapDriverNumber,
+        },
+      });
+      synced++;
+    }
+
+    return { success: true };
+  } catch (e: unknown) {
+    return { success: false, error: e instanceof Error ? e.message : 'Erro ao sincronizar' };
+  }
+}
+
+export async function getResyncSessions() {
+  await requireAdmin();
+
+  const activeSeason = await prisma.season.findFirst({ where: { isActive: true } });
+  if (!activeSeason) return [];
+
+  const sessions = await prisma.session.findMany({
+    where: {
+      seasonId: activeSeason.id,
+      type: { in: ['RACE', 'SPRINT'] },
+      cancelled: false,
+      openf1Key: { not: null },
+    },
+    include: { grandPrix: { select: { name: true } } },
+    orderBy: { date: 'desc' },
+  });
+
+  return sessions.map(s => ({
+    id: s.id,
+    type: s.type,
+    round: s.round,
+    date: s.date.toISOString(),
+    gpName: s.grandPrix.name,
+    openf1Key: s.openf1Key!,
+  }));
+}
+
 // ── Backup / Restore ────────────────────────────────────────────────────────
 
 export async function createBackup(): Promise<{ success: boolean; data?: string; error?: string }> {
@@ -223,7 +366,7 @@ export async function createBackup(): Promise<{ success: boolean; data?: string;
     ] = await Promise.all([
       prisma.team.findMany(),
       prisma.driver.findMany(),
-      prisma.user.findMany(),
+      prisma.user.findMany({ select: { id: true, email: true, username: true, name: true, role: true, category: true } }),
       prisma.season.findMany(),
       prisma.seasonConfig.findMany(),
       prisma.grandPrix.findMany(),
@@ -284,7 +427,14 @@ export async function restoreBackup(json: string): Promise<{ success: boolean; e
       // Inserir em ordem de dependência
       if (d.teams?.length) await tx.team.createMany({ data: d.teams });
       if (d.drivers?.length) await tx.driver.createMany({ data: d.drivers });
-      if (d.users?.length) await tx.user.createMany({ data: d.users });
+      if (d.users?.length) {
+        // Backups novos não contêm password — usa placeholder hash que impede login
+        const usersWithPw = d.users.map((u: Record<string, unknown>) => ({
+          ...u,
+          password: u.password ?? '$2a$10$PLACEHOLDER_NO_LOGIN_ALLOWED',
+        }));
+        await tx.user.createMany({ data: usersWithPw });
+      }
       if (d.seasons?.length) await tx.season.createMany({ data: d.seasons });
       if (d.seasonConfigs?.length) await tx.seasonConfig.createMany({ data: d.seasonConfigs });
       if (d.grandPrix?.length) await tx.grandPrix.createMany({ data: d.grandPrix });

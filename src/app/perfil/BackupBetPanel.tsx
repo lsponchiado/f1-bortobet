@@ -75,6 +75,7 @@ export function BackupBetPanel({ allDrivers, backupRace, backupSprint }: BackupB
   const handleSaveRace = () => {
     const gridIds = raceRows.map(r => r.driver.id);
     if (gridIds.some(id => id <= 0)) return;
+    if (!fastestLapId) return;
     setSaveStatus('saving');
     startTransition(async () => {
       const result = await saveBackupRaceBet({ gridIds, fastestLapId, predictedSC, predictedDNF });
@@ -116,7 +117,7 @@ export function BackupBetPanel({ allDrivers, backupRace, backupSprint }: BackupB
     });
   };
 
-  const raceComplete = raceRows.every(r => r.driver.id > 0);
+  const raceComplete = raceRows.every(r => r.driver.id > 0) && !!fastestLapId;
   const sprintComplete = sprintRows.every(r => r.driver.id > 0);
   const hasRaceBackup = backupRace !== null;
   const hasSprintBackup = backupSprint !== null;

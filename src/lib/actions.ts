@@ -5,10 +5,24 @@ import bcrypt from "bcryptjs";
 import { redirect } from "next/navigation";
 import { signIn, auth } from "@/auth";
 import { revalidatePath } from "next/cache";
+import { headers } from "next/headers";
+import { checkRateLimit, resetRateLimit } from "@/lib/rate-limit";
+
+async function getClientIp(): Promise<string> {
+  const h = await headers();
+  return h.get("x-forwarded-for")?.split(",")[0]?.trim() || h.get("x-real-ip") || "unknown";
+}
 
 // --- REGISTRO E LOGIN ---
 
 export async function registerUser(prevState: unknown, formData: FormData) {
+  const ip = await getClientIp();
+  const rl = checkRateLimit(`register:${ip}`);
+  if (!rl.allowed) {
+    const mins = Math.ceil((rl.retryAfterMs ?? 0) / 60000);
+    return { error: `Muitas tentativas. Tente novamente em ${mins} minuto(s).` };
+  }
+
   const name = formData.get("name") as string;
   const username = formData.get("username") as string;
   const email = formData.get("email") as string;
@@ -71,11 +85,19 @@ export async function loginUser(prevState: unknown, formData: FormData) {
 
   if (!identifier || !password) return { error: "Preencha todos os campos." };
 
+  const ip = await getClientIp();
+  const rl = checkRateLimit(`login:${ip}`);
+  if (!rl.allowed) {
+    const mins = Math.ceil((rl.retryAfterMs ?? 0) / 60000);
+    return { error: `Muitas tentativas. Tente novamente em ${mins} minuto(s).` };
+  }
+
   try {
     await signIn("credentials", { identifier, password, redirect: false });
   } catch (error) {
     return { error: "Credenciais inválidas. Verifique seu usuário/e-mail e senha." };
   }
+  resetRateLimit(`login:${ip}`);
   redirect("/");
 }
 
