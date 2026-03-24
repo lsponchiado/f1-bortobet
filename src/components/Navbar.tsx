@@ -75,7 +75,7 @@ export function Navbar({ username, isAdmin = false }: NavbarProps) {
       </nav>
 
       {/* Mobile bottom bar */}
-      <div className="md:hidden fixed bottom-0 left-0 w-full bg-[#1f1f27] border-t border-gray-800 py-2 flex justify-between items-center z-50 safe-bottom">
+      <div className="md:hidden fixed bottom-0 left-0 w-full bg-[#1f1f27] border-t border-gray-800 py-2 px-2 flex justify-evenly items-center z-50 safe-bottom">
         {mobileItems.map(({ href, label, icon: Icon }) => {
           const active = isActive(href);
           return (
