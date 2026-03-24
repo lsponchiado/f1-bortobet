@@ -37,7 +37,6 @@ interface GpPanelProps {
   trackName: string;
   trackMapUrl: string;
   sessions: SessionInfo[];
-  gpId: number;
   heading?: string;
 }
 
@@ -46,7 +45,6 @@ export function GpPanel({
   trackName,
   trackMapUrl,
   sessions,
-  gpId,
   heading,
 }: GpPanelProps) {
   const router = useRouter();
@@ -107,20 +105,6 @@ export function GpPanel({
             })}
           </div>
 
-          <div className="grid grid-cols-2 gap-3 pt-2 items-stretch">
-            <button
-              onClick={() => router.push(`/apostas/${gpId}`)}
-              className="w-full py-4 rounded-xl font-black italic uppercase text-sm transition-all active:scale-95 shadow-lg bg-[#e10600] hover:bg-[#ff0700] text-white"
-            >
-              Apostas
-            </button>
-            <button
-              onClick={() => router.push(`/resultados/${gpId}`)}
-              className="w-full py-4 rounded-xl font-black italic uppercase text-sm transition-all active:scale-95 shadow-lg bg-[#e10600] hover:bg-[#ff0700] text-white"
-            >
-              Resultados
-            </button>
-          </div>
         </div>
 
         {/* Map: desktop only, stretches full height */}

@@ -4,7 +4,7 @@ import { redirect } from 'next/navigation';
 import Link from 'next/link';
 import { GpPanel } from './GpPanel';
 import { Navbar } from '@/components/Navbar';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { ChevronLeft, ChevronRight, BookOpen } from 'lucide-react';
 
 export default async function HomePage({ searchParams }: { searchParams: Promise<{ round?: string }> }) {
   const session = await auth();
@@ -124,9 +124,16 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
                   date: s.date,
                   cancelled: s.cancelled,
                 }))}
-                gpId={raceSession.grandPrixId}
               />
             </div>
+
+          <Link
+            href="/regras"
+            className="inline-flex items-center gap-2 text-gray-500 hover:text-white transition-colors text-xs font-bold uppercase tracking-widest"
+          >
+            <BookOpen size={14} />
+            Regulamento
+          </Link>
 
           {cancelledGps.length > 0 && (
             <div className="w-full bg-[#1f1f27] rounded-3xl overflow-hidden border border-white/5 shadow-2xl">

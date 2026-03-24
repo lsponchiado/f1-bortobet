@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Trophy, User, LogOut, LayoutDashboard, BookOpen, Settings } from 'lucide-react';
+import { Trophy, User, LogOut, LayoutDashboard, Settings, Ticket, Medal } from 'lucide-react';
 import { signOut } from 'next-auth/react';
 import pkg from '../../package.json';
 
@@ -12,10 +12,10 @@ interface NavbarProps {
 }
 
 const navItems = [
-  { href: '/',          label: 'Home',        icon: LayoutDashboard },
-  { href: '/ranking',   label: 'Ranking',     icon: Trophy          },
-  { href: '/regras',    label: 'Regulamento', icon: BookOpen        },
-  { href: '/perfil',    label: 'Perfil',      icon: User            },
+  { href: '/',            label: 'Home',        icon: LayoutDashboard },
+  { href: '/apostas',     label: 'Apostas',     icon: Ticket          },
+  { href: '/ranking',     label: 'Ranking',     icon: Trophy          },
+  { href: '/resultados',  label: 'Resultados',  icon: Medal           },
 ];
 
 const adminItemDesktop = { href: '/admin', label: 'Configuração', icon: Settings };
@@ -63,6 +63,15 @@ export function Navbar({ username, isAdmin = false }: NavbarProps) {
 
           <div className="flex items-center gap-3">
             <span className="text-xs font-bold text-gray-500 hidden sm:inline">{username}</span>
+            <Link
+              href="/perfil"
+              className={`p-1.5 rounded-lg transition-colors ${
+                isActive('/perfil') ? 'text-[#e10600]' : 'text-gray-500 hover:text-[#e10600] hover:bg-white/5'
+              }`}
+              title="Perfil"
+            >
+              <User size={18} />
+            </Link>
             <button
               onClick={handleLogout}
               className="text-gray-500 hover:text-[#e10600] transition-colors p-1.5 rounded-lg hover:bg-white/5"
