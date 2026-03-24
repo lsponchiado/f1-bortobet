@@ -93,7 +93,7 @@ export function Navbar({ username, isAdmin = false }: NavbarProps) {
         })}
       </div>
 
-      <div className="h-16 md:h-20 safe-top box-content" />
+      <div className="h-16 md:h-20 mt-safe-top" />
     </>
   );
 }
