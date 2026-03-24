@@ -48,7 +48,7 @@ export function Navbar({ username, isAdmin = false }: NavbarProps) {
                 <Link
                   key={href}
                   href={href}
-                  className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${
+                  className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest transition-colors ${
                     active
                       ? 'bg-[#e10600]/10 text-[#e10600]'
                       : 'text-gray-400 hover:text-white hover:bg-white/5'
@@ -82,7 +82,7 @@ export function Navbar({ username, isAdmin = false }: NavbarProps) {
             <Link
               key={href}
               href={href}
-              className={`flex-1 flex flex-col items-center gap-1 py-1 rounded-xl transition-all ${
+              className={`flex-1 flex flex-col items-center gap-1 py-1 rounded-xl transition-colors ${
                 active ? 'text-[#e10600]' : 'text-gray-500'
               }`}
             >
