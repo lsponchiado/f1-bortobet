@@ -402,7 +402,14 @@ export async function restoreBackup(json: string): Promise<{ success: boolean; e
 
   try {
     const backup = JSON.parse(json);
-    if (!backup.data) return { success: false, error: 'Formato de backup inválido' };
+    if (!backup.data || typeof backup.data !== 'object') return { success: false, error: 'Formato de backup inválido' };
+    if (backup.version !== 1) return { success: false, error: `Versão de backup não suportada: ${backup.version}` };
+
+    const requiredKeys = ['teams', 'drivers', 'users', 'seasons', 'grandPrix', 'sessions'];
+    for (const key of requiredKeys) {
+      if (!Array.isArray(backup.data[key])) return { success: false, error: `Campo obrigatório ausente ou inválido: ${key}` };
+    }
+
     const d = backup.data;
 
     await prisma.$transaction(async (tx) => {
@@ -447,13 +454,12 @@ export async function restoreBackup(json: string): Promise<{ success: boolean; e
       if (d.betSprintGridItems?.length) await tx.betSprintGridItem.createMany({ data: d.betSprintGridItems });
       if (d.inviteCodes?.length) await tx.inviteCode.createMany({ data: d.inviteCodes });
 
-      // Resetar sequences para evitar conflitos de ID
-      const tables = [
+      // Resetar sequences — whitelist hardcoded, nenhum input externo
+      for (const table of [
         'Team', 'Driver', 'User', 'Season', 'SeasonConfig', 'GrandPrix',
         'Session', 'RaceConfig', 'SessionEntry', 'BetRace', 'BetRaceGridItem',
         'BetSprint', 'BetSprintGridItem', 'InviteCode',
-      ];
-      for (const table of tables) {
+      ] as const) {
         await tx.$executeRawUnsafe(
           `SELECT setval(pg_get_serial_sequence('"${table}"', 'id'), COALESCE((SELECT MAX(id) FROM "${table}"), 0) + 1, false)`
         );

@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useRef, useCallback, useMemo, useTransition } from 'react';
-import { X, Loader2, Camera } from 'lucide-react';
+import { useState, useMemo, useTransition } from 'react';
+import { X, Loader2 } from 'lucide-react';
 import { RankingFilterBar, type RankingGpOption } from './RankingFilterBar';
 import { RankingTable, type RankingEntry } from './RankingTable';
 import { getUserBetForGp } from '@/lib/admin-actions';
@@ -181,17 +181,6 @@ export function RankingClient({ scores, gpOptions, earnings }: RankingClientProp
   const [selectedGpId, setSelectedGpId] = useState<number | null>(null);
   const [betModal, setBetModal] = useState<{ username: string; data: UserBetData } | null>(null);
   const [isPending, startTransition] = useTransition();
-  const tableRef = useRef<HTMLDivElement>(null);
-
-  const handleScreenshot = useCallback(async () => {
-    if (!tableRef.current) return;
-    const { toPng } = await import('html-to-image');
-    const dataUrl = await toPng(tableRef.current, { pixelRatio: 2, backgroundColor: '#1f1f27' });
-    const link = document.createElement('a');
-    link.download = `ranking${selectedGpId ? `-gp${selectedGpId}` : '-geral'}.png`;
-    link.href = dataUrl;
-    link.click();
-  }, [selectedGpId]);
 
   const showGpColumns = selectedGpId !== null;
 
@@ -277,7 +266,7 @@ export function RankingClient({ scores, gpOptions, earnings }: RankingClientProp
         onGpChange={(gpId) => { setSelectedGpId(gpId); setBetModal(null); }}
       />
 
-      <div ref={tableRef}>
+      <div>
         <RankingTable
           entries={rankings}
           showGpColumns={showGpColumns}
@@ -285,14 +274,6 @@ export function RankingClient({ scores, gpOptions, earnings }: RankingClientProp
           onUserClick={showGpColumns ? handleUserClick : undefined}
         />
       </div>
-
-      <button
-        onClick={handleScreenshot}
-        className="flex items-center justify-center gap-2 py-3 rounded-xl bg-white/5 border border-white/10 text-gray-400 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
-      >
-        <Camera size={14} />
-        <span className="text-[10px] font-black uppercase tracking-widest">Salvar Imagem</span>
-      </button>
 
       {isPending && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm">

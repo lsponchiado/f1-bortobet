@@ -183,6 +183,8 @@ export function ApostasClient(props: ApostasClientProps) {
 
   const [rows, setRows] = useState<GridRowData[]>(gridInitialData);
 
+  const anyRowHasBadge = useMemo(() => rows.some(r => r.badges && r.badges.length > 0), [rows]);
+
   useEffect(() => {
     setRows(gridInitialData);
     setSaveStatus('idle');
@@ -323,7 +325,7 @@ export function ApostasClient(props: ApostasClientProps) {
             allDrivers={allDrivers}
             showDropdown={isEditable}
             showDelta={hasQualiResults || (!isEditable && !!activeResult)}
-            showBadges={!isEditable && activeSession?.hasEntries}
+            showBadges={!isEditable && activeSession?.hasEntries && anyRowHasBadge}
             rowGap="gap-2"
             onDriverSelect={handleDriverSelect}
           />

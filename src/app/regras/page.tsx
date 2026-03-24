@@ -11,7 +11,7 @@ export default async function RegrasPage() {
   return (
     <div className="min-h-screen bg-[#050505]">
       <Navbar username={displayUsername} isAdmin={session.user.role === 'ADMIN'} />
-      <main className="pt-6 pb-40 md:pb-12 px-6 lg:px-12 flex flex-col items-center">
+      <main className="pt-2 px-6 pb-40 md:pb-12 lg:px-12 flex flex-col items-center">
         <div className="w-full max-w-3xl space-y-8">
 
           <div>

@@ -34,7 +34,7 @@ export function Navbar({ username, isAdmin = false }: NavbarProps) {
   return (
     <>
       {/* Desktop top bar */}
-      <nav className="fixed top-0 w-full z-50 bg-[#15151e]/80 backdrop-blur-md border-b border-gray-800 px-6 py-3">
+      <nav className="fixed top-0 w-full z-50 bg-[#15151e]/80 backdrop-blur-md border-b border-gray-800 px-6 py-3 safe-top">
         <div className="max-w-7xl mx-auto flex justify-between items-center">
           <Link href="/" className="inline-flex items-end gap-4 text-[#e10600] text-2xl font-black italic tracking-tighter uppercase leading-none">
             F1 BORTOBET
@@ -75,7 +75,7 @@ export function Navbar({ username, isAdmin = false }: NavbarProps) {
       </nav>
 
       {/* Mobile bottom bar */}
-      <div className="md:hidden fixed bottom-0 left-0 w-full bg-[#1f1f27] border-t border-gray-800 py-2 flex justify-between items-center z-50">
+      <div className="md:hidden fixed bottom-0 left-0 w-full bg-[#1f1f27] border-t border-gray-800 py-2 flex justify-between items-center z-50 safe-bottom">
         {mobileItems.map(({ href, label, icon: Icon }) => {
           const active = isActive(href);
           return (
@@ -93,7 +93,7 @@ export function Navbar({ username, isAdmin = false }: NavbarProps) {
         })}
       </div>
 
-      <div className="h-16 md:h-20" />
+      <div className="h-16 md:h-20 safe-top" />
     </>
   );
 }

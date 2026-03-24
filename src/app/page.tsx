@@ -10,15 +10,14 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
   const session = await auth();
   if (!session?.user?.id) redirect('/login');
 
-  const userId = parseInt(session.user.id, 10);
   const now = new Date();
   const { round: roundParam } = await searchParams;
 
-  // Encontra o round a exibir: param da URL ou próxima corrida
+  // Busca próxima corrida (só precisa de round e seasonId)
   const nextRace = await prisma.session.findFirst({
     where: { type: 'RACE', date: { gte: now }, cancelled: false, grandPrix: { cancelled: false } },
     orderBy: { date: 'asc' },
-    include: { grandPrix: true, season: true, betRaces: { where: { userId } } },
+    select: { round: true, seasonId: true },
   });
 
   const seasonId = nextRace?.seasonId ?? (await prisma.season.findFirst({ where: { isActive: true } }))?.id;
@@ -30,20 +29,34 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
     );
   }
 
-  // Busca todos os rounds disponíveis da temporada
-  const allRounds = await prisma.session.findMany({
-    where: { type: 'RACE', seasonId, cancelled: false, grandPrix: { cancelled: false } },
-    orderBy: { round: 'asc' },
-    select: { round: true, grandPrix: { select: { name: true } } },
-  });
+  // allRounds + cancelledGps podem rodar em paralelo
+  const [allRounds, cancelledGps] = await Promise.all([
+    prisma.session.findMany({
+      where: { type: 'RACE', seasonId, cancelled: false, grandPrix: { cancelled: false } },
+      orderBy: { round: 'asc' },
+      select: { round: true },
+    }),
+    prisma.grandPrix.findMany({
+      where: { cancelled: true, sessions: { some: { seasonId } } },
+      orderBy: { name: 'asc' },
+      select: { name: true, country: true },
+    }),
+  ]);
 
   const defaultRound = nextRace?.round ?? allRounds[allRounds.length - 1]?.round ?? 1;
   const currentRound = roundParam ? parseInt(roundParam, 10) : defaultRound;
 
-  const raceSession = await prisma.session.findFirst({
-    where: { type: 'RACE', round: currentRound, seasonId, cancelled: false, grandPrix: { cancelled: false } },
-    include: { grandPrix: true, season: true, betRaces: { where: { userId } } },
-  });
+  // raceSession + roundSessions podem rodar em paralelo (mesmo filtro base)
+  const [raceSession, roundSessions] = await Promise.all([
+    prisma.session.findFirst({
+      where: { type: 'RACE', round: currentRound, seasonId, cancelled: false, grandPrix: { cancelled: false } },
+      include: { grandPrix: true },
+    }),
+    prisma.session.findMany({
+      where: { round: currentRound, seasonId, cancelled: false, grandPrix: { cancelled: false } },
+      orderBy: { date: 'asc' },
+    }),
+  ]);
 
   if (!raceSession) {
     return (
@@ -52,22 +65,6 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
       </main>
     );
   }
-
-  const roundSessions = await prisma.session.findMany({
-    where: { round: currentRound, seasonId, cancelled: false, grandPrix: { cancelled: false } },
-    orderBy: { date: 'asc' },
-  });
-
-  const sprintSession = roundSessions.find((s) => s.type === 'SPRINT');
-  const userSprintBet = sprintSession
-    ? await prisma.betSprint.findFirst({ where: { userId, sessionId: sprintSession.id } })
-    : null;
-
-  const cancelledGps = await prisma.grandPrix.findMany({
-    where: { cancelled: true, sessions: { some: { seasonId } } },
-    orderBy: { name: 'asc' },
-    select: { name: true, country: true },
-  });
 
   const displayUsername = session.user.username || session.user.name || 'User';
 
@@ -79,47 +76,48 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
   const isNextRace = currentRound === defaultRound;
   const displayRound = currentIndex + 1;
   const heading = isNextRace ? 'Próxima Corrida' : `Round ${displayRound}`;
+  const prevLabel = prevRound ? `Round ${currentIndex}` : null;
+  const nextLabel = nextRound ? `Round ${currentIndex + 2}` : null;
 
   return (
     <div className="min-h-screen bg-[#050505]">
       <Navbar username={displayUsername} isAdmin={session.user.role === 'ADMIN'} />
-      <main className="pt-6 p-6 pb-40 md:pb-6 lg:p-12 flex flex-col items-center">
-        <div className="w-full max-w-5xl space-y-12">
-          <div className="px-2 flex items-center justify-between">
-            <h2 className="text-white/20 text-4xl font-black italic uppercase tracking-tighter">
-              {heading}
-            </h2>
-            <div className="flex gap-2 shrink-0">
-              <Link
-                href={prevRound ? `/?round=${prevRound}` : '#'}
-                aria-disabled={!prevRound}
-                className={`w-12 h-12 md:w-14 md:h-14 rounded-full flex items-center justify-center border transition-all ${
-                  prevRound
-                    ? 'border-white/20 text-white hover:border-white/60 hover:bg-white/10 active:scale-95'
-                    : 'border-white/5 text-white/20 pointer-events-none'
-                }`}
-              >
-                <ChevronLeft size={24} />
-              </Link>
-              <Link
-                href={nextRound ? `/?round=${nextRound}` : '#'}
-                aria-disabled={!nextRound}
-                className={`w-12 h-12 md:w-14 md:h-14 rounded-full flex items-center justify-center border transition-all ${
-                  nextRound
-                    ? 'border-white/20 text-white hover:border-white/60 hover:bg-white/10 active:scale-95'
-                    : 'border-white/5 text-white/20 pointer-events-none'
-                }`}
-              >
-                <ChevronRight size={24} />
-              </Link>
-            </div>
+      <main className="pt-2 px-6 pb-40 md:pb-6 lg:px-12 lg:pt-4 flex flex-col items-center">
+        <div className="w-full max-w-5xl space-y-8">
+          <div>
+            <h1 className="text-4xl font-black italic uppercase tracking-tighter text-white leading-none">
+              Home
+            </h1>
+            <p className="text-[#e10600] text-xs font-bold uppercase tracking-widest mt-2">
+              Temporada 2026
+            </p>
           </div>
 
-          <div>
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              {prevRound ? (
+                <Link
+                  href={`/?round=${prevRound}`}
+                  className="flex items-center gap-2 text-gray-400 hover:text-white transition-all active:scale-95"
+                >
+                  <ChevronLeft size={20} />
+                  <span className="text-xs font-black uppercase italic tracking-wider">{prevLabel}</span>
+                </Link>
+              ) : <div />}
+              {nextRound ? (
+                <Link
+                  href={`/?round=${nextRound}`}
+                  className="flex items-center gap-2 text-gray-400 hover:text-white transition-all active:scale-95"
+                >
+                  <span className="text-xs font-black uppercase italic tracking-wider">{nextLabel}</span>
+                  <ChevronRight size={20} />
+                </Link>
+              ) : <div />}
+            </div>
             <GpPanel
+                heading={heading}
                 eventName={raceSession.grandPrix.name}
                 trackName={raceSession.grandPrix.trackName}
-                country={raceSession.grandPrix.country}
                 trackMapUrl={raceSession.grandPrix.trackMapUrl || ''}
                 sessions={roundSessions.map((s) => ({
                   type: s.type,

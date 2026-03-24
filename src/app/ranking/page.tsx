@@ -71,8 +71,18 @@ export default async function RankingPage() {
   return (
     <div className="min-h-screen bg-[#050505]">
       <Navbar username={displayUsername} isAdmin={isAdmin} />
-      <main className="pt-6 p-6 pb-40 md:pb-6 lg:p-12 flex flex-col items-center">
-        <div className="w-full max-w-xl">
+      <main className="pt-2 px-6 pb-40 md:pb-12 lg:px-12 flex flex-col items-center">
+        <div className="w-full max-w-xl space-y-8">
+
+          <div>
+            <h1 className="text-4xl font-black italic uppercase tracking-tighter text-white leading-none">
+              Ranking
+            </h1>
+            <p className="text-[#e10600] text-xs font-bold uppercase tracking-widest mt-2">
+              Classificação da Temporada
+            </p>
+          </div>
+
           <RankingClient scores={serializedScores} gpOptions={gpOptions} earnings={earnings} />
         </div>
       </main>

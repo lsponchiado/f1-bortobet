@@ -7,6 +7,7 @@ import { signIn, auth } from "@/auth";
 import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
 import { checkRateLimit, resetRateLimit } from "@/lib/rate-limit";
+import { GRID_SIZE } from "@/lib/constants";
 
 async function getClientIp(): Promise<string> {
   const h = await headers();
@@ -150,6 +151,40 @@ export async function updatePassword(currentPassword: string, newPassword: strin
   return { success: true };
 }
 
+// --- VALIDAÇÃO DE APOSTAS ---
+
+async function validateBetSession(sessionId: number, expectedType: 'RACE' | 'SPRINT', isAdmin: boolean) {
+  const session = await prisma.session.findUnique({
+    where: { id: sessionId },
+    select: { id: true, type: true, date: true, cancelled: true },
+  });
+
+  if (!session) return { error: 'Sessão não encontrada.' };
+  if (session.cancelled) return { error: 'Sessão cancelada.' };
+  if (session.type !== expectedType) return { error: 'Tipo de sessão inválido.' };
+
+  // Admin pode apostar a qualquer momento
+  if (!isAdmin && new Date(session.date) <= new Date()) {
+    return { error: 'Prazo para apostas encerrado.' };
+  }
+
+  return { session };
+}
+
+function validateGridIds(gridIds: number[], expectedSize: number): string | null {
+  if (!Array.isArray(gridIds)) return 'Grid inválido.';
+  if (gridIds.length !== expectedSize) return `Grid deve ter exatamente ${expectedSize} pilotos.`;
+  if (gridIds.some(id => typeof id !== 'number' || id <= 0)) return 'IDs de pilotos inválidos.';
+  if (new Set(gridIds).size !== gridIds.length) return 'Pilotos duplicados no grid.';
+  return null;
+}
+
+async function validateDriversExist(gridIds: number[]): Promise<string | null> {
+  const count = await prisma.driver.count({ where: { id: { in: gridIds }, enabled: true } });
+  if (count !== gridIds.length) return 'Um ou mais pilotos não existem ou estão desativados.';
+  return null;
+}
+
 // --- APOSTA DA CORRIDA (TOP 10 + Dials + Coringa) ---
 
 export async function saveRaceBet(data: {
@@ -167,6 +202,27 @@ export async function saveRaceBet(data: {
 
   const isAdmin = session.user.role === 'ADMIN';
   const userId = isAdmin && data.targetUserId ? data.targetUserId : parseInt(session.user.id, 10);
+
+  // Validar sessão
+  const sessionCheck = await validateBetSession(data.sessionId, 'RACE', isAdmin);
+  if ('error' in sessionCheck) return { error: sessionCheck.error };
+
+  // Validar grid
+  const gridError = validateGridIds(data.gridIds, GRID_SIZE.RACE);
+  if (gridError) return { error: gridError };
+
+  const driversError = await validateDriversExist(data.gridIds);
+  if (driversError) return { error: driversError };
+
+  // Validar fastest lap
+  if (!data.fastestLapId || !data.gridIds.includes(data.fastestLapId)) {
+    return { error: 'Volta mais rápida deve ser um piloto do grid.' };
+  }
+
+  // Validar SC/DNF
+  if (data.predictedSC < 0 || data.predictedDNF < 0) {
+    return { error: 'Valores de SC/DNF não podem ser negativos.' };
+  }
 
   try {
     await prisma.$transaction(async (tx) => {
@@ -213,6 +269,9 @@ export async function deleteRaceBet(data: { sessionId: number; targetUserId?: nu
   const isAdmin = session.user.role === 'ADMIN';
   const userId = isAdmin && data.targetUserId ? data.targetUserId : parseInt(session.user.id, 10);
 
+  const sessionCheck = await validateBetSession(data.sessionId, 'RACE', isAdmin);
+  if ('error' in sessionCheck) return { error: sessionCheck.error };
+
   try {
     const bet = await prisma.betRace.findFirst({ where: { userId, sessionId: data.sessionId } });
     if (!bet) return { error: "Nenhuma aposta encontrada." };
@@ -238,6 +297,9 @@ export async function deleteSprintBet(data: { sessionId: number; targetUserId?: 
 
   const isAdmin = session.user.role === 'ADMIN';
   const userId = isAdmin && data.targetUserId ? data.targetUserId : parseInt(session.user.id, 10);
+
+  const sessionCheck = await validateBetSession(data.sessionId, 'SPRINT', isAdmin);
+  if ('error' in sessionCheck) return { error: sessionCheck.error };
 
   try {
     const bet = await prisma.betSprint.findFirst({ where: { userId, sessionId: data.sessionId } });
@@ -268,6 +330,17 @@ export async function saveSprintBet(data: {
 
   const isAdmin = session.user.role === 'ADMIN';
   const userId = isAdmin && data.targetUserId ? data.targetUserId : parseInt(session.user.id, 10);
+
+  // Validar sessão
+  const sessionCheck = await validateBetSession(data.sessionId, 'SPRINT', isAdmin);
+  if ('error' in sessionCheck) return { error: sessionCheck.error };
+
+  // Validar grid
+  const gridError = validateGridIds(data.gridIds, GRID_SIZE.SPRINT);
+  if (gridError) return { error: gridError };
+
+  const driversError = await validateDriversExist(data.gridIds);
+  if (driversError) return { error: driversError };
 
   try {
     await prisma.$transaction(async (tx) => {

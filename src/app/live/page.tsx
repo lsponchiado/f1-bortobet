@@ -60,7 +60,7 @@ export default async function LivePage() {
   return (
     <div className="min-h-screen bg-[#050505]">
       <Navbar username={displayUsername} isAdmin={session.user.role === 'ADMIN'} />
-      <main className="pt-6 p-6 pb-40 md:pb-6 lg:p-12 flex flex-col items-center">
+      <main className="pt-2 px-6 pb-40 md:pb-6 lg:px-12 lg:pt-4 flex flex-col items-center">
         <div className="w-full max-w-400 space-y-8">
           <LiveClient wsUrl={wsUrl} drivers={serializedDrivers} startingGrid={startingGrid} />
         </div>

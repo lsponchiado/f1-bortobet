@@ -9,6 +9,23 @@ const SESSION_DURATION_MIN: Partial<Record<SessionType, number>> = {
   SPRINT: 45, RACE: 120,
 };
 
+const dateFormatter = new Intl.DateTimeFormat('pt-BR', {
+  day: '2-digit',
+  month: '2-digit',
+  hour: '2-digit',
+  minute: '2-digit',
+  hour12: false,
+});
+
+function formatDate(date: Date) {
+  const parts = dateFormatter.formatToParts(new Date(date));
+  const day = parts.find((p) => p.type === 'day')?.value;
+  const month = parts.find((p) => p.type === 'month')?.value;
+  const hour = parts.find((p) => p.type === 'hour')?.value;
+  const minute = parts.find((p) => p.type === 'minute')?.value;
+  return `${day}/${month}, ${hour}:${minute}`;
+}
+
 interface SessionInfo {
   type: SessionType;
   date: Date;
@@ -18,74 +35,39 @@ interface SessionInfo {
 interface GpPanelProps {
   eventName: string;
   trackName: string;
-  country: string;
   trackMapUrl: string;
   sessions: SessionInfo[];
   gpId: number;
+  heading?: string;
 }
 
 export function GpPanel({
   eventName,
   trackName,
-  country,
   trackMapUrl,
   sessions,
   gpId,
+  heading,
 }: GpPanelProps) {
   const router = useRouter();
   const now = new Date();
 
-  const formatDate = (date: Date) => {
-    const formatter = new Intl.DateTimeFormat('pt-BR', {
-      day: '2-digit',
-      month: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit',
-      hour12: false,
-      timeZoneName: 'short',
-    });
-
-    const parts = formatter.formatToParts(new Date(date));
-    const day = parts.find((p) => p.type === 'day')?.value;
-    const month = parts.find((p) => p.type === 'month')?.value;
-    const hour = parts.find((p) => p.type === 'hour')?.value;
-    const minute = parts.find((p) => p.type === 'minute')?.value;
-    const tz = parts.find((p) => p.type === 'timeZoneName')?.value;
-
-    return `${day}/${month}, ${hour}:${minute}`;
-  };
-
-  const sortedSessions = [...sessions].sort(
-    (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
-  );
-
   return (
     <div className="w-full bg-[#1f1f27] rounded-3xl overflow-hidden border border-white/5 shadow-2xl relative">
       <div className="h-1 w-full bg-[#e10600]" />
-      <div className="p-8 space-y-6">
-        {/* Header em largura total */}
-        <header>
-          <div className="flex items-center gap-5">
+      <div className="flex flex-col md:flex-row">
+        <div className="flex-1 p-8 space-y-6">
+          <header>
+            {heading && (
+              <p className="text-gray-500 text-lg font-black italic uppercase tracking-tighter mb-1 -mt-2">{heading}{'\u00A0\u00A0\u00A0'} · {'\u00A0\u00A0\u00A0'}{trackName}</p>
+            )}
             <h2 className="text-4xl font-black italic uppercase tracking-tighter text-white leading-none">
               {eventName}
             </h2>
-            <img
-              src={`https://flagcdn.com/w640/${(country || '').toLowerCase()}.png`}
-              alt={country}
-              className="h-12 w-auto rounded-sm border border-white/10 shadow-xl object-contain flex-shrink-0"
-            />
-          </div>
-          <div className="text-gray-400 mt-2 uppercase tracking-widest font-bold text-sm">
-            {trackName}
-          </div>
-        </header>
+          </header>
 
-        {/* Duas colunas: sessões+botões | mapa */}
-        <div className="flex flex-col md:flex-row gap-14 items-end">
-          <div className="flex-1 space-y-6">
-            <div className="flex flex-col gap-3 py-4 border-y border-white/5">
-
-            {sortedSessions.map((s) => {
+          <div className="flex flex-col gap-3 py-4 border-y border-white/5">
+            {sessions.map((s) => {
               const sessionStart = new Date(s.date);
               const durationMin = SESSION_DURATION_MIN[s.type] ?? 90;
               const sessionEnd = new Date(sessionStart.getTime() + durationMin * 60 * 1000);
@@ -128,38 +110,26 @@ export function GpPanel({
           <div className="grid grid-cols-2 gap-3 pt-2 items-stretch">
             <button
               onClick={() => router.push(`/apostas/${gpId}`)}
-              className="w-full py-4 rounded-xl font-black italic uppercase text-sm transition-all active:scale-95 shadow-lg bg-white text-black hover:bg-gray-200"
+              className="w-full py-4 rounded-xl font-black italic uppercase text-sm transition-all active:scale-95 shadow-lg bg-[#e10600] hover:bg-[#ff0700] text-white"
             >
               Apostas
             </button>
+            <button
+              onClick={() => router.push(`/resultados/${gpId}`)}
+              className="w-full py-4 rounded-xl font-black italic uppercase text-sm transition-all active:scale-95 shadow-lg bg-[#e10600] hover:bg-[#ff0700] text-white"
+            >
+              Resultados
+            </button>
+          </div>
+        </div>
 
-            {(() => {
-              const anyPast = sessions.some((s) => !s.cancelled && new Date(s.date) < now);
-              return (
-                <button
-                  onClick={() => anyPast && router.push(`/resultados/${gpId}`)}
-                  disabled={!anyPast}
-                  className={`w-full py-4 rounded-xl font-black italic uppercase text-sm transition-all shadow-lg ${
-                    anyPast
-                      ? 'active:scale-95 bg-[#e10600] hover:bg-[#ff0700] text-white'
-                      : 'bg-gray-800 text-gray-500 cursor-not-allowed'
-                  }`}
-                >
-                  Resultados
-                </button>
-              );
-            })()}
-          </div>
-          </div>
-
-          {/* Map: desktop only, right column */}
-          <div className="hidden md:flex w-80 aspect-square items-center justify-center bg-black/20 rounded-2xl p-6 border border-white/5 relative group flex-shrink-0">
-            <img
-              src={trackMapUrl}
-              alt={trackName}
-              className="w-full h-full object-contain opacity-80 group-hover:opacity-100 transition-opacity duration-500"
-            />
-          </div>
+        {/* Map: desktop only, stretches full height */}
+        <div className="hidden md:flex w-80 items-center justify-center bg-black/20 p-6 border-l border-white/5 group flex-shrink-0">
+          <img
+            src={trackMapUrl}
+            alt={trackName}
+            className="w-full h-full object-contain opacity-80 group-hover:opacity-100 transition-opacity duration-500"
+          />
         </div>
       </div>
     </div>

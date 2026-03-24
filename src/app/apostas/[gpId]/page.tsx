@@ -202,7 +202,7 @@ export default async function ApostasPage({ params, searchParams }: { params: Pr
     <div className="min-h-screen bg-[#050505]">
       <Navbar username={displayUsername} isAdmin={isAdmin} />
 
-      <main className="pt-6 p-6 pb-40 md:pb-6 lg:p-12 flex flex-col items-center">
+      <main className="pt-2 px-6 pb-40 md:pb-6 lg:px-12 lg:pt-4 flex flex-col items-center">
         <ApostasClient
           sessions={serializedSessions}
           gpName={gp.name}

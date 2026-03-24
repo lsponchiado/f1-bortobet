@@ -37,8 +37,18 @@ export default async function AdminPage() {
   return (
     <div className="min-h-screen bg-[#050505]">
       <Navbar username={currentUsername} isAdmin />
-      <main className="pt-6 pb-40 md:pb-12 px-6 lg:px-12 flex flex-col items-center">
-        <div className="w-full max-w-5xl">
+      <main className="pt-2 px-6 pb-40 md:pb-12 lg:px-12 flex flex-col items-center">
+        <div className="w-full max-w-5xl space-y-8">
+
+          <div>
+            <h1 className="text-4xl font-black italic uppercase tracking-tighter text-white leading-none">
+              Configuração
+            </h1>
+            <p className="text-[#e10600] text-xs font-bold uppercase tracking-widest mt-2">
+              Painel Administrativo
+            </p>
+          </div>
+
           <AdminClient configData={configData} allUsers={allUsers} strollCount={strollCount} totalGps={totalGps} cancelledGps={cancelledGps} resyncSessions={resyncSessions} />
         </div>
       </main>

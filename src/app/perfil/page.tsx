@@ -40,8 +40,18 @@ export default async function PerfilPage() {
   return (
     <div className="min-h-screen bg-[#050505]">
       <Navbar username={displayUsername} isAdmin={session.user.role === 'ADMIN'} />
-      <main className="pt-6 pb-40 md:pb-12 px-6 lg:px-12 flex flex-col items-center">
+      <main className="pt-2 px-6 pb-40 md:pb-12 lg:px-12 flex flex-col items-center">
         <div className="w-full max-w-2xl space-y-8">
+
+          <div>
+            <h1 className="text-4xl font-black italic uppercase tracking-tighter text-white leading-none">
+              Perfil
+            </h1>
+            <p className="text-[#e10600] text-xs font-bold uppercase tracking-widest mt-2">
+              Dados da Conta
+            </p>
+          </div>
+
           <ProfileClient name={user.name} email={user.email} username={user.username} />
           <BackupBetPanel
             allDrivers={serializedDrivers}
