@@ -103,10 +103,21 @@ export function ResultadosClient({ sessions, gpName, currentGpId, allGps }: Resu
 
   if (sessionsWithEntries.length === 0) {
     return (
-      <div className="flex items-center justify-center py-20">
-        <p className="text-gray-500 font-black uppercase italic tracking-widest">
-          Sem resultados disponíveis
-        </p>
+      <div className="flex flex-col gap-8 pb-20">
+        <GpSessionBar
+          gpName={gpName}
+          currentGpId={currentGpId}
+          allGps={allGps}
+          basePath="/resultados"
+          sessions={[]}
+          activeSessionId={null}
+          onSessionChange={() => {}}
+        />
+        <div className="flex items-center justify-center py-20">
+          <p className="text-gray-500 font-black uppercase italic tracking-widest">
+            Sem resultados disponíveis
+          </p>
+        </div>
       </div>
     );
   }

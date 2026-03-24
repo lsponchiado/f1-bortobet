@@ -18,20 +18,23 @@ export default async function ResultadosPage({ params }: { params: Promise<{ gpI
   const gp = await prisma.grandPrix.findUnique({ where: { id: gpId } });
   if (!gp) redirect('/');
 
-  // All GPs with results, ordered by earliest session date (single query)
-  const serializedGps = await prisma.$queryRaw<{ id: number; name: string; country: string }[]>`
-    SELECT gp.id, gp.name, gp.country
-    FROM "GrandPrix" gp
-    WHERE EXISTS (
-      SELECT 1 FROM "Session" s
-      JOIN "SessionEntry" se ON se."sessionId" = s.id
-      WHERE s."grandPrixId" = gp.id AND s."seasonId" = ${activeSeason.id}
-    )
-    ORDER BY (
-      SELECT MIN(s.date) FROM "Session" s
-      WHERE s."grandPrixId" = gp.id AND s."seasonId" = ${activeSeason.id}
-    ) ASC
-  `;
+  // All GPs in the active season, ordered by earliest session date
+  const allGpsRaw = await prisma.grandPrix.findMany({
+    where: { sessions: { some: { seasonId: activeSeason.id } } },
+    select: {
+      id: true,
+      name: true,
+      country: true,
+      sessions: {
+        where: { seasonId: activeSeason.id },
+        orderBy: { date: 'asc' },
+        take: 1,
+        select: { date: true },
+      },
+    },
+  });
+  allGpsRaw.sort((a, b) => (a.sessions[0]?.date.getTime() ?? 0) - (b.sessions[0]?.date.getTime() ?? 0));
+  const allGps = allGpsRaw.map(g => ({ id: g.id, name: g.name, country: g.country }));
 
   const sessions = await prisma.session.findMany({
     where: { grandPrixId: gpId, seasonId: activeSeason.id },
@@ -88,7 +91,7 @@ export default async function ResultadosPage({ params }: { params: Promise<{ gpI
             sessions={serializedSessions}
             gpName={gp.name}
             currentGpId={gpId}
-            allGps={serializedGps}
+            allGps={allGps}
           />
         </div>
       </main>

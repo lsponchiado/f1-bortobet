@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Trophy, User, LogOut, LayoutDashboard, Settings, Ticket, Medal } from 'lucide-react';
+import { Trophy, User, LogOut, LayoutDashboard, Settings, Ticket, Medal, BookOpen } from 'lucide-react';
 import { signOut } from 'next-auth/react';
 import pkg from '../../package.json';
 
@@ -63,6 +63,15 @@ export function Navbar({ username, isAdmin = false }: NavbarProps) {
 
           <div className="flex items-center gap-3">
             <span className="text-xs font-bold text-gray-500 hidden sm:inline">{username}</span>
+            <Link
+              href="/regras"
+              className={`p-1.5 rounded-lg transition-colors ${
+                isActive('/regras') ? 'text-[#e10600]' : 'text-gray-500 hover:text-[#e10600] hover:bg-white/5'
+              }`}
+              title="Regulamento"
+            >
+              <BookOpen size={18} />
+            </Link>
             <Link
               href="/perfil"
               className={`p-1.5 rounded-lg transition-colors ${
