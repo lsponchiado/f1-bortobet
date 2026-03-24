@@ -79,18 +79,44 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
   const prevLabel = prevRound ? `Round ${currentIndex}` : null;
   const nextLabel = nextRound ? `Round ${currentIndex + 2}` : null;
 
+  // Check if any session in this round is live
+  const SESSION_DURATION_MIN: Record<string, number> = {
+    PRACTICE_1: 60, PRACTICE_2: 60, PRACTICE_3: 60,
+    SPRINT_QUALIFYING: 45, QUALIFYING: 60,
+    SPRINT: 45, RACE: 120,
+  };
+  const isLive = roundSessions.some(s => {
+    const start = new Date(s.date);
+    const end = new Date(start.getTime() + (SESSION_DURATION_MIN[s.type] ?? 90) * 60_000);
+    return !s.cancelled && now >= start && now <= end;
+  });
+
   return (
     <div className="min-h-screen bg-[#050505]">
       <Navbar username={displayUsername} isAdmin={session.user.role === 'ADMIN'} />
       <main className="pt-2 px-6 pb-40 md:pb-6 lg:px-12 lg:pt-4 flex flex-col items-center">
         <div className="w-full max-w-5xl space-y-8">
-          <div>
-            <h1 className="text-4xl font-black italic uppercase tracking-tighter text-white leading-none">
-              Home
-            </h1>
-            <p className="text-[#e10600] text-xs font-bold uppercase tracking-widest mt-2">
-              Temporada 2026
-            </p>
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-4xl font-black italic uppercase tracking-tighter text-white leading-none">
+                Home
+              </h1>
+              <p className="text-[#e10600] text-xs font-bold uppercase tracking-widest mt-2">
+                Temporada 2026
+              </p>
+            </div>
+            {isLive && (
+              <Link
+                href="/live"
+                className="flex items-center gap-2 bg-[#e10600] hover:bg-[#ff0700] text-white font-black italic uppercase text-sm px-5 py-3 rounded-xl shadow-lg transition-colors active:scale-95"
+              >
+                <span className="relative flex h-3 w-3">
+                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-white/50" />
+                  <span className="relative inline-flex h-3 w-3 rounded-full bg-white" />
+                </span>
+                LIVE
+              </Link>
+            )}
           </div>
 
           <div className="space-y-2">

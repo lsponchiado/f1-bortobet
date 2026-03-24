@@ -1,13 +1,4 @@
-'use client';
-
-import { useRouter } from 'next/navigation';
 import { SESSION_LABELS, SESSION_LABELS_SHORT, type SessionType } from '@/lib/constants';
-
-const SESSION_DURATION_MIN: Partial<Record<SessionType, number>> = {
-  PRACTICE_1: 60, PRACTICE_2: 60, PRACTICE_3: 60,
-  SPRINT_QUALIFYING: 45, QUALIFYING: 60,
-  SPRINT: 45, RACE: 120,
-};
 
 const dateFormatter = new Intl.DateTimeFormat('pt-BR', {
   day: '2-digit',
@@ -47,7 +38,6 @@ export function GpPanel({
   sessions,
   heading,
 }: GpPanelProps) {
-  const router = useRouter();
   const now = new Date();
 
   return (
@@ -64,13 +54,9 @@ export function GpPanel({
             </h2>
           </header>
 
-          <div className="flex flex-col gap-3 py-4 border-y border-white/5">
+          <div className="flex flex-col gap-3 pt-4 border-t border-white/5">
             {sessions.map((s) => {
-              const sessionStart = new Date(s.date);
-              const durationMin = SESSION_DURATION_MIN[s.type] ?? 90;
-              const sessionEnd = new Date(sessionStart.getTime() + durationMin * 60 * 1000);
-              const isLive = !s.cancelled && now >= sessionStart && now <= sessionEnd;
-              const past = !s.cancelled && !isLive && sessionStart < now;
+              const past = !s.cancelled && new Date(s.date) < now;
 
               return (
                 <div key={s.type} className={`grid grid-cols-2 items-center gap-4 ${past ? 'opacity-40' : ''}`}>
@@ -82,19 +68,6 @@ export function GpPanel({
                     <div className="text-gray-500 text-xl font-black italic uppercase tracking-tight text-right">
                       Cancelada
                     </div>
-                  ) : isLive ? (
-                    <button
-                      onClick={() => router.push('/live')}
-                      className="flex items-center justify-end gap-2 cursor-pointer"
-                    >
-                      <span className="relative flex h-3 w-3">
-                        <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-red-400 opacity-75" />
-                        <span className="relative inline-flex h-3 w-3 rounded-full bg-[#e10600]" />
-                      </span>
-                      <span className="text-[#e10600] text-xl font-black italic uppercase tracking-tight">
-                        LIVE
-                      </span>
-                    </button>
                   ) : (
                     <div className={`text-white font-mono text-xl font-bold text-right ${past ? 'line-through' : ''}`}>
                       {formatDate(s.date)}
@@ -104,7 +77,6 @@ export function GpPanel({
               );
             })}
           </div>
-
         </div>
 
         {/* Map: desktop only, stretches full height */}
