@@ -70,6 +70,8 @@ model User {
   inviteCode        InviteCode?
   backupRace        BackupRaceBet?
   backupSprint      BackupSprintBet?
+  pushSubscriptions      PushSubscription[]
+  notificationPreference NotificationPreference?
 }
 
 model Season {
@@ -317,6 +319,26 @@ model BackupSprintBet {
   userId    Int     @unique
   gridIds   Int[]
   user      User    @relation(fields: [userId], references: [id])
+}
+
+model PushSubscription {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  endpoint  String   @unique
+  p256dh    String
+  auth      String
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model NotificationPreference {
+  id              Int     @id @default(autoincrement())
+  userId          Int     @unique
+  sessionReminder Boolean @default(false)
+  betReminder     Boolean @default(false)
+  user            User    @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model InviteCode {

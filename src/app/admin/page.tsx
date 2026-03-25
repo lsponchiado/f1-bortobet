@@ -1,16 +1,15 @@
-import { auth } from '@/auth';
 import { prisma } from '@/lib/prisma';
 import { redirect } from 'next/navigation';
 import { Navbar } from '@/components/Navbar';
 import { AdminClient } from './AdminClient';
 import { getConfigData, getResyncSessions } from '@/lib/admin-actions';
+import { getAuthSession, getDisplayUsername } from '@/lib/auth-utils';
 
 export default async function AdminPage() {
-  const session = await auth();
-  if (!session?.user?.id) redirect('/login');
+  const session = await getAuthSession();
   if (session.user.role !== 'ADMIN') redirect('/');
 
-  const currentUsername = session.user.username || session.user.name || 'User';
+  const currentUsername = getDisplayUsername(session);
   const configData = await getConfigData();
   const seasonId = configData.season?.id;
 

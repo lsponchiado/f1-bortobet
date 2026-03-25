@@ -1,48 +1,35 @@
-import { auth } from '@/auth';
 import { prisma } from '@/lib/prisma';
 import { redirect } from 'next/navigation';
 import { Navbar } from '@/components/Navbar';
 import { LiveClient } from './LiveClient';
+import { getAuthSession, getDisplayUsername } from '@/lib/auth-utils';
+import { serializeDriver } from '@/lib/serialize';
+import { getActiveSeason, getActiveDrivers } from '@/lib/cached-queries';
 
 export default async function LivePage() {
-  const session = await auth();
-  if (!session?.user?.id) redirect('/login');
+  const session = await getAuthSession();
 
-  const activeSeason = await prisma.season.findFirst({ where: { isActive: true } });
+  const activeSeason = await getActiveSeason();
   if (!activeSeason) redirect('/');
 
-  const drivers = await prisma.driver.findMany({
-    where: { enabled: true },
-    include: { team: true },
-  });
-
-  const serializedDrivers = drivers.map(d => ({
-    id: d.id,
-    lastName: d.lastName,
-    code: d.code,
-    number: d.number,
-    headshotUrl: d.headshotUrl,
-    team: {
-      name: d.team.name,
-      color: d.team.color,
-      logoUrl: d.team.logoUrl,
-    },
-  }));
-
-  // Busca posições de largada da sessão Race ou Sprint mais próxima (hoje ou futura)
   const now = new Date();
-  const raceOrSprint = await prisma.session.findFirst({
-    where: {
-      seasonId: activeSeason.id,
-      type: { in: ['RACE', 'SPRINT'] },
-      date: { gte: new Date(now.getTime() - 6 * 60 * 60 * 1000) }, // até 6h atrás
-      cancelled: false,
-    },
-    orderBy: { date: 'asc' },
-    include: {
-      entries: { select: { driverId: true, startPosition: true } },
-    },
-  });
+  const [drivers, raceOrSprint] = await Promise.all([
+    getActiveDrivers(),
+    prisma.session.findFirst({
+      where: {
+        seasonId: activeSeason.id,
+        type: { in: ['RACE', 'SPRINT'] },
+        date: { gte: new Date(now.getTime() - 6 * 60 * 60 * 1000) },
+        cancelled: false,
+      },
+      orderBy: { date: 'asc' },
+      include: {
+        entries: { select: { driverId: true, startPosition: true } },
+      },
+    }),
+  ]);
+
+  const serializedDrivers = drivers.map(serializeDriver);
 
   // Map driverId -> startPosition
   const startingGrid: Record<number, number> = {};
@@ -55,7 +42,7 @@ export default async function LivePage() {
   }
 
   const wsUrl = process.env.NEXT_PUBLIC_LIVE_WS_URL || 'ws://localhost:8080';
-  const displayUsername = session.user.username || session.user.name || 'User';
+  const displayUsername = getDisplayUsername(session);
 
   return (
     <div className="min-h-screen bg-[#050505]">

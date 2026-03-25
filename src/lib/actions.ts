@@ -4,7 +4,7 @@ import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
 import { redirect } from "next/navigation";
 import { signIn, auth } from "@/auth";
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 import { headers } from "next/headers";
 import { checkRateLimit, resetRateLimit } from "@/lib/rate-limit";
 import { GRID_SIZE } from "@/lib/constants";
@@ -253,6 +253,7 @@ export async function saveRaceBet(data: {
     });
 
     revalidatePath("/");
+    revalidateTag('ranking', { expire: 0 });
     return { success: true };
   } catch (error) {
     console.error(error);
@@ -282,6 +283,7 @@ export async function deleteRaceBet(data: { sessionId: number; targetUserId?: nu
     });
 
     revalidatePath("/");
+    revalidateTag('ranking', { expire: 0 });
     return { success: true };
   } catch (error) {
     console.error(error);
@@ -311,6 +313,7 @@ export async function deleteSprintBet(data: { sessionId: number; targetUserId?: 
     });
 
     revalidatePath("/");
+    revalidateTag('ranking', { expire: 0 });
     return { success: true };
   } catch (error) {
     console.error(error);
@@ -366,6 +369,7 @@ export async function saveSprintBet(data: {
     });
 
     revalidatePath("/");
+    revalidateTag('ranking', { expire: 0 });
     return { success: true };
   } catch (error) {
     console.error(error);

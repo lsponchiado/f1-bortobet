@@ -1,14 +1,12 @@
-import { auth } from '@/auth';
 import { prisma } from '@/lib/prisma';
-import { redirect } from 'next/navigation';
 import Link from 'next/link';
 import { GpPanel } from './GpPanel';
 import { Navbar } from '@/components/Navbar';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { getAuthSession, getDisplayUsername } from '@/lib/auth-utils';
 
 export default async function HomePage({ searchParams }: { searchParams: Promise<{ round?: string }> }) {
-  const session = await auth();
-  if (!session?.user?.id) redirect('/login');
+  const session = await getAuthSession();
 
   const now = new Date();
   const { round: roundParam } = await searchParams;
@@ -66,7 +64,7 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
     );
   }
 
-  const displayUsername = session.user.username || session.user.name || 'User';
+  const displayUsername = getDisplayUsername(session);
 
   const validRounds = allRounds.map((r) => r.round);
   const currentIndex = validRounds.indexOf(currentRound);

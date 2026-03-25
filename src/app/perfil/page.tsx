@@ -1,41 +1,31 @@
-import { auth } from '@/auth';
 import { prisma } from '@/lib/prisma';
 import { redirect } from 'next/navigation';
 import { Navbar } from '@/components/Navbar';
 import { ProfileClient } from './ProfileClient';
 import { BackupBetPanel } from './BackupBetPanel';
+import { NotificationPanel } from './NotificationPanel';
+import { getAuthSession, getDisplayUsername } from '@/lib/auth-utils';
+import { serializeDriver } from '@/lib/serialize';
+import { getActiveDrivers } from '@/lib/cached-queries';
 
 export default async function PerfilPage() {
-  const session = await auth();
-  if (!session?.user?.id) redirect('/login');
-
+  const session = await getAuthSession();
   const userId = parseInt(session.user.id, 10);
-  const user = await prisma.user.findUnique({
-    where: { id: userId },
-    select: { name: true, email: true, username: true },
-  });
+  const displayUsername = getDisplayUsername(session);
+
+  const [user, allDrivers, backupRace, backupSprint] = await Promise.all([
+    prisma.user.findUnique({
+      where: { id: userId },
+      select: { name: true, email: true, username: true },
+    }),
+    getActiveDrivers(),
+    prisma.backupRaceBet.findUnique({ where: { userId } }),
+    prisma.backupSprintBet.findUnique({ where: { userId } }),
+  ]);
 
   if (!user) redirect('/login');
 
-  const displayUsername = session.user.username || session.user.name || 'User';
-
-  const allDrivers = await prisma.driver.findMany({
-    where: { enabled: true },
-    orderBy: { teamId: 'asc' },
-    include: { team: true },
-  });
-
-  const serializedDrivers = allDrivers.map(d => ({
-    id: d.id,
-    lastName: d.lastName,
-    code: d.code,
-    number: d.number,
-    headshotUrl: d.headshotUrl,
-    team: { name: d.team.name, color: d.team.color, logoUrl: d.team.logoUrl },
-  }));
-
-  const backupRace = await prisma.backupRaceBet.findUnique({ where: { userId } });
-  const backupSprint = await prisma.backupSprintBet.findUnique({ where: { userId } });
+  const serializedDrivers = allDrivers.map(serializeDriver);
 
   return (
     <div className="min-h-screen bg-[#050505]">
@@ -53,6 +43,7 @@ export default async function PerfilPage() {
           </div>
 
           <ProfileClient name={user.name} email={user.email} username={user.username} />
+          <NotificationPanel />
           <BackupBetPanel
             allDrivers={serializedDrivers}
             backupRace={backupRace ? {

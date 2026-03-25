@@ -1,12 +1,9 @@
-import { auth } from '@/auth';
-import { redirect } from 'next/navigation';
 import { Navbar } from '@/components/Navbar';
+import { getAuthSession, getDisplayUsername } from '@/lib/auth-utils';
 
 export default async function RegrasPage() {
-  const session = await auth();
-  if (!session?.user?.id) redirect('/login');
-
-  const displayUsername = session.user.username || session.user.name || 'User';
+  const session = await getAuthSession();
+  const displayUsername = getDisplayUsername(session);
 
   return (
     <div className="min-h-screen bg-[#050505]">

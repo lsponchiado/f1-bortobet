@@ -1,16 +1,17 @@
 import { redirect } from 'next/navigation';
-import { auth } from '@/auth';
 import { prisma } from '@/lib/prisma';
 import { ApostasClient } from './ApostasClient';
 import { Navbar } from '@/components/Navbar';
+import { getAuthSession, getDisplayUsername } from '@/lib/auth-utils';
+import { serializeDriver } from '@/lib/serialize';
+import { getActiveSeasonWithConfig, getGpsForSeason, getActiveDrivers } from '@/lib/cached-queries';
 
 export default async function ApostasPage({ params, searchParams }: { params: Promise<{ gpId: string }>; searchParams: Promise<{ asUser?: string }> }) {
-  const session = await auth();
-  if (!session?.user?.id) redirect('/login');
+  const session = await getAuthSession();
 
   const loggedInUserId = parseInt(session.user.id, 10);
   const isAdmin = session.user.role === 'ADMIN';
-  const displayUsername = session.user.username || session.user.name || 'User';
+  const displayUsername = getDisplayUsername(session);
 
   const { gpId: gpIdStr } = await params;
   const gpId = parseInt(gpIdStr, 10);
@@ -21,49 +22,26 @@ export default async function ApostasPage({ params, searchParams }: { params: Pr
   const targetUserId = isAdmin && asUser ? parseInt(asUser, 10) : loggedInUserId;
   const userId = isNaN(targetUserId) ? loggedInUserId : targetUserId;
 
-  const activeSeason = await prisma.season.findFirst({
-    where: { isActive: true },
-    include: { config: true },
-  });
+  const activeSeason = await getActiveSeasonWithConfig();
   if (!activeSeason) redirect('/');
 
-  const gp = await prisma.grandPrix.findUnique({
-    where: { id: gpId },
-    include: {
-      sessions: {
-        where: { seasonId: activeSeason.id },
-        include: {
-          entries: { include: { driver: { include: { team: true } } } },
-          raceConfig: true,
+  const [gp, allGps, allDrivers] = await Promise.all([
+    prisma.grandPrix.findUnique({
+      where: { id: gpId },
+      include: {
+        sessions: {
+          where: { seasonId: activeSeason.id },
+          include: {
+            entries: { include: { driver: { include: { team: true } } } },
+            raceConfig: true,
+          },
         },
       },
-    },
-  });
+    }),
+    getGpsForSeason(activeSeason.id),
+    getActiveDrivers(),
+  ]);
   if (!gp) redirect('/');
-
-  // All GPs with sessions in active season, ordered by earliest session date (single query)
-  const allGpsRaw = await prisma.grandPrix.findMany({
-    where: { sessions: { some: { seasonId: activeSeason.id } } },
-    select: {
-      id: true,
-      name: true,
-      country: true,
-      sessions: {
-        where: { seasonId: activeSeason.id },
-        orderBy: { date: 'asc' },
-        take: 1,
-        select: { date: true },
-      },
-    },
-  });
-  allGpsRaw.sort((a, b) => (a.sessions[0]?.date.getTime() ?? 0) - (b.sessions[0]?.date.getTime() ?? 0));
-  const allGps = allGpsRaw.map(g => ({ id: g.id, name: g.name, country: g.country }));
-
-  const allDrivers = await prisma.driver.findMany({
-    where: { enabled: true },
-    orderBy: { teamId: 'asc' },
-    include: { team: true },
-  });
 
   // Load existing bets for each bettable session type
   const raceSessions = gp.sessions.filter(s => s.type === 'RACE');
@@ -189,14 +167,7 @@ export default async function ApostasPage({ params, searchParams }: { params: Pr
     })),
   }));
 
-  const serializedDrivers = allDrivers.map(d => ({
-    id: d.id,
-    lastName: d.lastName,
-    code: d.code,
-    number: d.number,
-    headshotUrl: d.headshotUrl,
-    team: { name: d.team.name, color: d.team.color, logoUrl: d.team.logoUrl },
-  }));
+  const serializedDrivers = allDrivers.map(serializeDriver);
 
   return (
     <div className="min-h-screen bg-[#050505]">

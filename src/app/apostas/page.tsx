@@ -1,10 +1,9 @@
-import { auth } from '@/auth';
 import { prisma } from '@/lib/prisma';
 import { redirect } from 'next/navigation';
+import { getAuthSession } from '@/lib/auth-utils';
 
 export default async function ApostasIndexPage() {
-  const session = await auth();
-  if (!session?.user?.id) redirect('/login');
+  await getAuthSession();
 
   const now = new Date();
 

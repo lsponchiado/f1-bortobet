@@ -1,12 +1,13 @@
 'use client';
 
 import { useState } from 'react';
-import { ArrowUpDown, Clock, Circle } from 'lucide-react';
+import { ArrowUpDown, Clock, Circle, Users } from 'lucide-react';
 import { Grid } from '@/components/Grid';
 import { GpSessionBar } from '@/components/GpSessionBar';
+import { TeamDuel } from '@/components/TeamDuel';
 import type { GridRowData, CardVariant } from '@/types/grid';
 
-type ViewOption = 'delta' | 'tempos' | 'stints';
+type ViewOption = 'delta' | 'tempos' | 'stints' | 'equipe';
 
 interface SessionEntry {
   startPosition: number;
@@ -38,6 +39,8 @@ interface SessionData {
   type: string;
   date: string;
   cancelled: boolean;
+  scCount: number;
+  vscCount: number;
   entries: SessionEntry[];
 }
 
@@ -75,6 +78,7 @@ function entryToRowData(entry: SessionEntry, position: number): GridRowData {
     tireStints: entry.tireStints,
   };
 }
+
 
 export function ResultadosClient({ sessions, gpName, currentGpId, allGps }: ResultadosClientProps) {
   const sessionsWithEntries = sessions
@@ -133,6 +137,7 @@ export function ResultadosClient({ sessions, gpName, currentGpId, allGps }: Resu
     { key: 'delta', label: 'Delta', icon: ArrowUpDown, available: isRaceType },
     { key: 'tempos', label: 'Tempos', icon: Clock, available: isRaceType && hasTiming },
     { key: 'stints', label: 'Stints', icon: Circle, available: isRaceType && hasTires },
+    { key: 'equipe', label: 'Equipe', icon: Users, available: isRaceType },
   ];
 
   const availableOptions = viewOptions.filter(o => o.available);
@@ -183,16 +188,59 @@ export function ResultadosClient({ sessions, gpName, currentGpId, allGps }: Resu
         )}
       </div>
 
-      {/* Mobile: grid único */}
-      <div className="xl:hidden">
-        <Grid key={activeSessionId} rows={rows} {...gridProps} />
-      </div>
+      {activeView === 'equipe' && activeSession ? (
+        <TeamDuel entries={activeSession.entries} />
+      ) : (
+        <>
+          {/* Mobile: grid único */}
+          <div className="xl:hidden">
+            <Grid key={activeSessionId} rows={rows} {...gridProps} />
+          </div>
 
-      {/* Desktop: dois grids lado a lado */}
-      <div className="hidden xl:flex gap-8 justify-center">
-        <Grid key={`${activeSessionId}-a`} rows={firstHalf} {...gridProps} />
-        <Grid key={`${activeSessionId}-b`} rows={secondHalf} {...gridProps} />
-      </div>
+          {/* Desktop: dois grids lado a lado */}
+          <div className="hidden xl:flex gap-8 justify-center">
+            <Grid key={`${activeSessionId}-a`} rows={firstHalf} {...gridProps} />
+            <Grid key={`${activeSessionId}-b`} rows={secondHalf} {...gridProps} />
+          </div>
+        </>
+      )}
+
+      {/* Session summary table */}
+      {isRaceType && activeSession && (() => {
+        const dnfCount = activeSession.entries.filter(e => e.dnf).length;
+        const dnsCount = activeSession.entries.filter(e => e.dns).length;
+        const dsqCount = activeSession.entries.filter(e => e.dsq).length;
+        const sc = activeSession.scCount;
+        const vsc = activeSession.vscCount;
+
+        const stats = [
+          { label: 'Safety Car', value: sc },
+          { label: 'Virtual SC', value: vsc },
+          { label: 'Abandonos', value: dnfCount },
+          { label: 'Não Largaram', value: dnsCount },
+          { label: 'Desclassificados', value: dsqCount },
+        ].filter(s => s.value > 0);
+
+        if (stats.length === 0) return null;
+
+        return (
+          <div className="max-w-md mx-auto w-full">
+            <div className="bg-[#1f1f27] rounded-2xl border border-white/5 overflow-hidden">
+              <div className="px-4 py-3 border-b border-white/5">
+                <p className="text-[10px] font-black uppercase tracking-widest text-gray-500">Resumo da Sessão</p>
+              </div>
+              <div className="divide-y divide-white/5">
+                {stats.map(s => (
+                  <div key={s.label} className="flex items-center justify-between px-4 py-2.5">
+                    <span className="text-xs font-bold text-gray-400">{s.label}</span>
+                    <span className="text-sm font-black tabular-nums text-white">{s.value}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 }

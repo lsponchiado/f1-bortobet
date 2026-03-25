@@ -1,28 +1,32 @@
-import { auth } from '@/auth';
 import { prisma } from '@/lib/prisma';
 import { redirect } from 'next/navigation';
+import { getAuthSession } from '@/lib/auth-utils';
 
 export default async function ResultadosIndexPage() {
-  const session = await auth();
-  if (!session?.user?.id) redirect('/login');
+  await getAuthSession();
 
-  const now = new Date();
+  // Último GP que tem resultados (entries)
+  const lastWithResults = await prisma.session.findFirst({
+    where: {
+      type: 'RACE',
+      cancelled: false,
+      grandPrix: { cancelled: false },
+      entries: { some: {} },
+    },
+    orderBy: { date: 'desc' },
+    select: { grandPrixId: true },
+  });
 
+  if (lastWithResults) redirect(`/resultados/${lastWithResults.grandPrixId}`);
+
+  // Fallback: próximo GP (mesmo sem resultados)
   const nextRace = await prisma.session.findFirst({
-    where: { type: 'RACE', date: { gte: now }, cancelled: false, grandPrix: { cancelled: false } },
+    where: { type: 'RACE', date: { gte: new Date() }, cancelled: false, grandPrix: { cancelled: false } },
     orderBy: { date: 'asc' },
     select: { grandPrixId: true },
   });
 
   if (nextRace) redirect(`/resultados/${nextRace.grandPrixId}`);
-
-  const lastRace = await prisma.session.findFirst({
-    where: { type: 'RACE', cancelled: false, grandPrix: { cancelled: false } },
-    orderBy: { date: 'desc' },
-    select: { grandPrixId: true },
-  });
-
-  if (lastRace) redirect(`/resultados/${lastRace.grandPrixId}`);
 
   redirect('/');
 }

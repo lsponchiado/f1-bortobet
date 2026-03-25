@@ -2,6 +2,7 @@
 
 import { auth } from '@/auth';
 import { redirect } from 'next/navigation';
+import { revalidateTag } from 'next/cache';
 import { randomBytes } from 'crypto';
 import { prisma } from '@/lib/prisma';
 import type { BetGridItem, UserBetData } from '@/lib/constants';
@@ -79,6 +80,8 @@ export async function saveSeasonConfig(data: SeasonConfigInput) {
     update: data,
   });
 
+  revalidateTag('season', { expire: 0 });
+  revalidateTag('ranking', { expire: 0 });
   return { success: true };
 }
 
@@ -97,6 +100,7 @@ export async function saveRaceConfig(sessionId: number, data: RaceConfigInput) {
     update: data,
   });
 
+  revalidateTag('gps', { expire: 0 });
   return { success: true };
 }
 
@@ -203,6 +207,7 @@ export async function toggleGpCancelled(grandPrixId: number, cancelled: boolean)
     data: { cancelled },
   });
 
+  revalidateTag('gps', { expire: 0 });
   return { success: true };
 }
 
@@ -321,10 +326,64 @@ export async function resyncSessionResults(sessionId: number): Promise<{ success
       synced++;
     }
 
+    revalidateTag('results', { expire: 0 });
+    revalidateTag('ranking', { expire: 0 });
+    revalidateTag('gps', { expire: 0 });
     return { success: true };
   } catch (e: unknown) {
     return { success: false, error: e instanceof Error ? e.message : 'Erro ao sincronizar' };
   }
+}
+
+export async function syncAllPending(): Promise<{
+  success: boolean;
+  results: Array<{ sessionId: number; gpName: string; type: string; status: 'synced' | 'skipped' | 'error'; error?: string }>;
+}> {
+  await requireAdmin();
+
+  const activeSeason = await prisma.season.findFirst({ where: { isActive: true } });
+  if (!activeSeason) return { success: false, results: [] };
+
+  const now = new Date();
+  const twoDaysAgo = new Date(now.getTime() - 48 * 60 * 60 * 1000);
+
+  // Sessions that happened, have openf1Key, and either have no entries or are recent (for corrections)
+  const sessions = await prisma.session.findMany({
+    where: {
+      seasonId: activeSeason.id,
+      type: { in: ['RACE', 'SPRINT'] },
+      cancelled: false,
+      openf1Key: { not: null },
+      date: { lte: now },
+    },
+    include: {
+      grandPrix: { select: { name: true } },
+      _count: { select: { entries: true } },
+    },
+    orderBy: { date: 'desc' },
+  });
+
+  // Only sync: no entries yet, or session within last 48h (corrections)
+  const toSync = sessions.filter(s => s._count.entries === 0 || s.date >= twoDaysAgo);
+
+  const results: Array<{ sessionId: number; gpName: string; type: string; status: 'synced' | 'skipped' | 'error'; error?: string }> = [];
+
+  for (const s of toSync) {
+    const result = await resyncSessionResults(s.id);
+    results.push({
+      sessionId: s.id,
+      gpName: s.grandPrix.name,
+      type: s.type,
+      status: result.success ? 'synced' : 'error',
+      error: result.error,
+    });
+  }
+
+  revalidateTag('results', { expire: 0 });
+  revalidateTag('ranking', { expire: 0 });
+  revalidateTag('gps', { expire: 0 });
+
+  return { success: true, results };
 }
 
 export async function getResyncSessions() {
@@ -466,6 +525,11 @@ export async function restoreBackup(json: string): Promise<{ success: boolean; e
       }
     }, { timeout: 120_000 });
 
+    revalidateTag('season', { expire: 0 });
+    revalidateTag('drivers', { expire: 0 });
+    revalidateTag('gps', { expire: 0 });
+    revalidateTag('results', { expire: 0 });
+    revalidateTag('ranking', { expire: 0 });
     return { success: true };
   } catch (e: unknown) {
     return { success: false, error: e instanceof Error ? e.message : 'Erro ao restaurar backup' };
