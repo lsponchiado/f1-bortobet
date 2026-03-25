@@ -40,28 +40,35 @@ export function NotificationPanel() {
   const testTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
-    const supported = 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window;
-    setIsSupported(supported);
-
-    if (!supported) {
+    if (!('serviceWorker' in navigator) || !('Notification' in window)) {
       setLoaded(true);
       return;
     }
 
+    // Timeout: if SW takes too long, show toggles anyway
+    const timeout = setTimeout(() => setLoaded(true), 3000);
+
     navigator.serviceWorker.ready.then(async (reg) => {
-      try {
-        const sub = await reg.pushManager.getSubscription();
-        if (sub) {
-          setIsSubscribed(true);
-          const prefs = await getNotificationPreferences();
-          setSessionReminder(prefs.sessionReminder);
-          setBetReminder(prefs.betReminder);
+      clearTimeout(timeout);
+      const hasPush = !!reg.pushManager;
+      setIsSupported(hasPush);
+
+      if (hasPush) {
+        try {
+          const sub = await reg.pushManager.getSubscription();
+          if (sub) {
+            setIsSubscribed(true);
+            const prefs = await getNotificationPreferences();
+            setSessionReminder(prefs.sessionReminder);
+            setBetReminder(prefs.betReminder);
+          }
+        } catch (e) {
+          console.error('Push check error:', e);
         }
-      } catch (e) {
-        console.error('Push check error:', e);
       }
       setLoaded(true);
     }).catch(() => {
+      clearTimeout(timeout);
       setLoaded(true);
     });
   }, []);
