@@ -40,12 +40,16 @@ export function NotificationPanel() {
   const testTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
-    const supported = 'serviceWorker' in navigator && 'PushManager' in window;
-    setIsSupported(supported);
+    if (!('serviceWorker' in navigator)) {
+      setLoaded(true);
+      return;
+    }
 
-    if (supported) {
-      // Check if already subscribed
-      navigator.serviceWorker.ready.then(async (reg) => {
+    navigator.serviceWorker.ready.then(async (reg) => {
+      const supported = !!reg.pushManager;
+      setIsSupported(supported);
+
+      if (supported) {
         const sub = await reg.pushManager.getSubscription();
         if (sub) {
           setIsSubscribed(true);
@@ -53,11 +57,11 @@ export function NotificationPanel() {
           setSessionReminder(prefs.sessionReminder);
           setBetReminder(prefs.betReminder);
         }
-        setLoaded(true);
-      });
-    } else {
+      }
       setLoaded(true);
-    }
+    }).catch(() => {
+      setLoaded(true);
+    });
   }, []);
 
   const ensureSubscribed = useCallback(async (): Promise<boolean> => {
