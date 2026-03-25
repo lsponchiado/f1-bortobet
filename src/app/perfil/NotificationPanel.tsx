@@ -40,31 +40,35 @@ export function NotificationPanel() {
   const testTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
-    if (!('serviceWorker' in navigator) || !('Notification' in window)) {
+    const hasApis = 'serviceWorker' in navigator && 'Notification' in window;
+    setIsSupported(hasApis);
+
+    if (!hasApis) {
       setLoaded(true);
       return;
     }
 
-    // Timeout: if SW takes too long, show toggles anyway
-    const timeout = setTimeout(() => setLoaded(true), 3000);
+    // Try to load existing subscription, but don't block rendering
+    const timeout = setTimeout(() => setLoaded(true), 2000);
 
     navigator.serviceWorker.ready.then(async (reg) => {
       clearTimeout(timeout);
-      const hasPush = !!reg.pushManager;
-      setIsSupported(hasPush);
+      if (!reg.pushManager) {
+        setIsSupported(false);
+        setLoaded(true);
+        return;
+      }
 
-      if (hasPush) {
-        try {
-          const sub = await reg.pushManager.getSubscription();
-          if (sub) {
-            setIsSubscribed(true);
-            const prefs = await getNotificationPreferences();
-            setSessionReminder(prefs.sessionReminder);
-            setBetReminder(prefs.betReminder);
-          }
-        } catch (e) {
-          console.error('Push check error:', e);
+      try {
+        const sub = await reg.pushManager.getSubscription();
+        if (sub) {
+          setIsSubscribed(true);
+          const prefs = await getNotificationPreferences();
+          setSessionReminder(prefs.sessionReminder);
+          setBetReminder(prefs.betReminder);
         }
+      } catch (e) {
+        console.error('Push check error:', e);
       }
       setLoaded(true);
     }).catch(() => {
