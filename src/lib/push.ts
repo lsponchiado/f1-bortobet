@@ -2,11 +2,16 @@
 import webpush from 'web-push';
 import { prisma } from '@/lib/prisma';
 
-webpush.setVapidDetails(
-  process.env.VAPID_SUBJECT || 'mailto:admin@bortobet.com',
-  process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY || '',
-  process.env.VAPID_PRIVATE_KEY || '',
-);
+let vapidConfigured = false;
+function ensureVapid() {
+  if (vapidConfigured) return;
+  webpush.setVapidDetails(
+    process.env.VAPID_SUBJECT || 'mailto:admin@bortobet.com',
+    process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY || '',
+    process.env.VAPID_PRIVATE_KEY || '',
+  );
+  vapidConfigured = true;
+}
 
 interface PushPayload {
   title: string;
@@ -15,6 +20,7 @@ interface PushPayload {
 }
 
 export async function sendPushToUser(userId: number, payload: PushPayload): Promise<{ sent: number; failed: number }> {
+  ensureVapid();
   const subs = await prisma.pushSubscription.findMany({ where: { userId } });
   let sent = 0;
   let failed = 0;
