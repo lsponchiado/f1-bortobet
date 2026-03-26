@@ -183,23 +183,25 @@ SELECT
   END::int                                      AS "abandonos",
 
   (
-    COALESCE((SELECT SUM(v) FROM UNNEST(ba."somaPos") v), 0)
-    + COALESCE((SELECT SUM(v) FROM UNNEST(ba."hailMary") v), 0)
-    + COALESCE((SELECT SUM(v) FROM UNNEST(ba."underdog") v), 0)
-    + COALESCE((SELECT SUM(v) FROM UNNEST(ba."freefall") v), 0)
-    + CASE WHEN COALESCE(rc."allowFastestLap", true) THEN COALESCE(ba.fl_total, 0) ELSE 0 END
-    + CASE WHEN COALESCE(rc."allowSafetyCar", true)
-           AND (
-             (br."predictedSC" >= 3 AND (s."scCount" + s."vscCount") >= 3)
-             OR (br."predictedSC" < 3 AND br."predictedSC" = s."scCount" + s."vscCount")
-           )
-          THEN pts."ptsSafetyCar" ELSE 0 END
-    + CASE WHEN COALESCE(rc."allowDNF", true)
-           AND (
-             (br."predictedDNF" >= 3 AND COALESCE(dc.cnt, 0) >= 3)
-             OR (br."predictedDNF" < 3 AND br."predictedDNF" = COALESCE(dc.cnt, 0))
-           )
-          THEN pts."ptsDNF" ELSE 0 END
+    (
+      COALESCE((SELECT SUM(v) FROM UNNEST(ba."somaPos") v), 0)
+      + COALESCE((SELECT SUM(v) FROM UNNEST(ba."hailMary") v), 0)
+      + COALESCE((SELECT SUM(v) FROM UNNEST(ba."underdog") v), 0)
+      + COALESCE((SELECT SUM(v) FROM UNNEST(ba."freefall") v), 0)
+      + CASE WHEN COALESCE(rc."allowFastestLap", true) THEN COALESCE(ba.fl_total, 0) ELSE 0 END
+      + CASE WHEN COALESCE(rc."allowSafetyCar", true)
+             AND (
+               (br."predictedSC" >= 3 AND (s."scCount" + s."vscCount") >= 3)
+               OR (br."predictedSC" < 3 AND br."predictedSC" = s."scCount" + s."vscCount")
+             )
+            THEN pts."ptsSafetyCar" ELSE 0 END
+      + CASE WHEN COALESCE(rc."allowDNF", true)
+             AND (
+               (br."predictedDNF" >= 3 AND COALESCE(dc.cnt, 0) >= 3)
+               OR (br."predictedDNF" < 3 AND br."predictedDNF" = COALESCE(dc.cnt, 0))
+             )
+            THEN pts."ptsDNF" ELSE 0 END
+    ) * CASE WHEN br."doublePoints" AND COALESCE(rc."allowDoublePoints", true) THEN 2 ELSE 1 END
   )::int                                        AS "somaTotal"
 
 FROM "BetRace" br

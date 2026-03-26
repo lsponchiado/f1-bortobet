@@ -330,7 +330,10 @@ SELECT
         ) THEN pts."ptsDNF"
         ELSE 0
       END
-    )
+    ) * CASE
+        WHEN (br."doublePoints" AND COALESCE(rc."allowDoublePoints", TRUE)) THEN 2
+        ELSE 1
+      END
   ) :: integer AS "somaTotal"
 FROM
   (
