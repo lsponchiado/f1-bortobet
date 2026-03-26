@@ -251,14 +251,19 @@ export async function resyncSessionResults(sessionId: number): Promise<{ success
       fetch(`${baseUrl}/v1/race_control?session_key=${session.openf1Key}&category=SafetyCar`),
     ]);
 
-    const [results, grid, laps, rcMsgs] = await Promise.all([
-      resultsRes.json() as Promise<Array<{ driver_number: number; position: number | null; points: number; dnf?: boolean; dns?: boolean; dsq?: boolean }>>,
-      gridRes.json() as Promise<Array<{ driver_number: number; position: number | null }>>,
-      lapsRes.json() as Promise<Array<{ driver_number: number; lap_duration: number | null }>>,
-      rcRes.json() as Promise<Array<{ message: string }>>,
+    const [resultsRaw, gridRaw, lapsRaw, rcMsgsRaw] = await Promise.all([
+      resultsRes.json().catch(() => []),
+      gridRes.json().catch(() => []),
+      lapsRes.json().catch(() => []),
+      rcRes.json().catch(() => []),
     ]);
 
-    if (!Array.isArray(results) || results.length === 0) {
+    const results = Array.isArray(resultsRaw) ? resultsRaw : [];
+    const grid = Array.isArray(gridRaw) ? gridRaw : [];
+    const laps = Array.isArray(lapsRaw) ? lapsRaw : [];
+    const rcMsgs = Array.isArray(rcMsgsRaw) ? rcMsgsRaw : [];
+
+    if (results.length === 0) {
       return { success: false, error: 'Sem resultados na OpenF1 para esta sessão' };
     }
 
@@ -269,16 +274,16 @@ export async function resyncSessionResults(sessionId: number): Promise<{ success
     }
 
     // Fastest lap
-    const validLaps = laps.filter(l => l.lap_duration != null);
-    validLaps.sort((a, b) => a.lap_duration! - b.lap_duration!);
+    const validLaps = laps.filter((l: { lap_duration: number | null }) => l.lap_duration != null);
+    validLaps.sort((a: { lap_duration: number | null }, b: { lap_duration: number | null }) => a.lap_duration! - b.lap_duration!);
     const fastestLapDriverNumber = validLaps[0]?.driver_number || null;
 
     // Safety cars
-    const scCount = rcMsgs.filter(m =>
+    const scCount = rcMsgs.filter((m: { message?: string }) =>
       m.message?.toLowerCase().includes('deployed') &&
       !m.message?.toLowerCase().includes('virtual')
     ).length;
-    const vscCount = rcMsgs.filter(m =>
+    const vscCount = rcMsgs.filter((m: { message?: string }) =>
       m.message?.toLowerCase().includes('virtual') &&
       m.message?.toLowerCase().includes('deployed')
     ).length;
