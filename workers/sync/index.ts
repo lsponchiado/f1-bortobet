@@ -132,12 +132,32 @@ async function syncSessionResults(sessionKey: number) {
     return;
   }
 
-  // Buscar starting grid
-  const startingGrid = await db.collection('starting_grid')
+  // Buscar starting grid — para corrida/sprint, buscar na qualifying correspondente
+  const startPositionMap = new Map<number, number>();
+
+  // Primeiro tenta o próprio session_key
+  let startingGrid = await db.collection('starting_grid')
     .find({ session_key: sessionKey })
     .toArray();
 
-  const startPositionMap = new Map<number, number>();
+  // Se não encontrou e é corrida/sprint, buscar a qualifying do mesmo meeting
+  if (startingGrid.length === 0) {
+    const thisSession = await db.collection('sessions')
+      .findOne({ session_key: sessionKey });
+
+    if (thisSession?.meeting_key) {
+      const qualType = session.type === 'SPRINT' ? 'Sprint Qualifying' : 'Qualifying';
+      const qualSession = await db.collection('sessions')
+        .findOne({ meeting_key: thisSession.meeting_key, session_name: qualType });
+
+      if (qualSession) {
+        startingGrid = await db.collection('starting_grid')
+          .find({ session_key: qualSession.session_key })
+          .toArray();
+      }
+    }
+  }
+
   for (const g of startingGrid) {
     if (g.driver_number && g.position) {
       startPositionMap.set(g.driver_number, g.position);
