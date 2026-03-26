@@ -63,7 +63,7 @@ function entryToRowData(entry: SessionEntry, position: number): GridRowData {
   if (entry.fastestLap) variant = 'purple';
 
   const delta: number | string | undefined = entry.dns ? 'DNS' : entry.dsq ? 'DSQ' : entry.dnf ? 'DNF'
-    : entry.startPosition - entry.finishPosition;
+    : (entry.startPosition >= 90 ? undefined : entry.startPosition - entry.finishPosition);
 
   return {
     position,
@@ -145,7 +145,7 @@ export function ResultadosClient({ sessions, gpName, currentGpId, allGps }: Resu
   const gridProps = {
     allDrivers: [] as [],
     showDropdown: false,
-    showDelta: activeView === 'delta',
+    showDelta: activeView === 'delta' && isRaceType,
     showBadges: false,
     showTiming: activeView === 'tempos',
     showTires: activeView === 'stints',
