@@ -166,7 +166,7 @@ export function ResultadosClient({ sessions, gpName, currentGpId, allGps }: Resu
           onSessionChange={setActiveSessionId}
         />
 
-        {isRaceType && availableOptions.length > 1 && (
+        {availableOptions.length > 1 && (
           <div className="flex justify-center">
             <div className="inline-flex gap-1 bg-[#1f1f27] border border-white/5 rounded-xl p-1">
               {availableOptions.map(({ key, label, icon: Icon }) => (
