@@ -7,10 +7,10 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
   }
 
-  revalidateTag('results');
-  revalidateTag('ranking');
-  revalidateTag('gps');
-  revalidateTag('drivers');
+  revalidateTag('results', { expire: 0 });
+  revalidateTag('ranking', { expire: 0 });
+  revalidateTag('gps', { expire: 0 });
+  revalidateTag('drivers', { expire: 0 });
 
   return NextResponse.json({ revalidated: true });
 }
