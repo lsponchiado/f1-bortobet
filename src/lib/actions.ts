@@ -5,6 +5,7 @@ import bcrypt from "bcryptjs";
 import { redirect } from "next/navigation";
 import { signIn, auth } from "@/auth";
 import { revalidatePath, revalidateTag } from "next/cache";
+import { getAuthUserId } from "@/lib/auth-utils";
 import { headers } from "next/headers";
 import { checkRateLimit, resetRateLimit } from "@/lib/rate-limit";
 import { GRID_SIZE } from "@/lib/constants";
@@ -103,12 +104,6 @@ export async function loginUser(prevState: unknown, formData: FormData) {
 }
 
 // --- PERFIL ---
-
-async function getAuthUserId(): Promise<number> {
-  const session = await auth();
-  if (!session?.user?.id) redirect('/login');
-  return parseInt(session.user.id, 10);
-}
 
 export async function updateName(name: string) {
   const userId = await getAuthUserId();

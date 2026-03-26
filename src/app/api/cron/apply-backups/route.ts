@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod/v4';
 import { applyBackupsForSession, applyBackupsForRecentSessions } from '@/lib/backups';
+
+const bodySchema = z.object({ sessionId: z.number().int().positive() }).optional();
 
 export async function POST(request: NextRequest) {
   const cronSecret = process.env.CRON_SECRET;
@@ -10,8 +13,10 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
   }
 
-  const body = await request.json().catch(() => null);
-  const sessionId = body?.sessionId as number | undefined;
+  const raw = await request.json().catch(() => undefined);
+  const parsed = bodySchema.safeParse(raw);
+  if (!parsed.success) return NextResponse.json({ error: 'Payload inválido' }, { status: 400 });
+  const sessionId = parsed.data?.sessionId;
 
   // Modo worker: recebe sessionId específico (ex: via MQTT)
   if (sessionId) {
