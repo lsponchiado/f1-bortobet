@@ -56,24 +56,27 @@ grid_scored AS (
 
     CASE WHEN gd.bet_fl AND gd.actual_fl THEN pts."ptsFastestLap" ELSE 0 END AS fl_pts,
 
-    -- Hail Mary: predicted top 5, started P20+, finished top 5
-    CASE WHEN gd.pos <= 5
+    -- Hail Mary: acertou posição + predicted top 5, started P20+, finished top 5
+    CASE WHEN gd."finishPosition" = gd.pos
+          AND gd.pos <= 5
           AND gd."startPosition" >= 20
           AND gd."finishPosition" <= 5
          THEN pts."ptsHailMary"
          ELSE 0
     END AS hm_raw,
 
-    -- Underdog: predicted top 3, climbed 10+, finished top 3
-    CASE WHEN gd.pos <= 3
+    -- Underdog: acertou posição + predicted top 3, climbed 10+, finished top 3
+    CASE WHEN gd."finishPosition" = gd.pos
+          AND gd.pos <= 3
           AND (gd."startPosition" - gd."finishPosition") >= 10
           AND gd."finishPosition" <= 3
          THEN pts."ptsUnderdog"
          ELSE 0
     END AS ud_raw,
 
-    -- Freefall: predicted drop 5+ from start AND actually dropped 5+
-    CASE WHEN (gd.pos - gd."startPosition") >= 5
+    -- Freefall: acertou posição + predicted drop 5+ from start AND actually dropped 5+
+    CASE WHEN gd."finishPosition" = gd.pos
+          AND (gd.pos - gd."startPosition") >= 5
           AND (gd."finishPosition" - gd."startPosition") >= 5
          THEN pts."ptsFreefall"
          ELSE 0

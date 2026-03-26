@@ -135,7 +135,7 @@ export function ResultadosClient({ sessions, gpName, currentGpId, allGps }: Resu
 
   const viewOptions: { key: ViewOption; label: string; icon: React.ElementType; available: boolean }[] = [
     { key: 'delta', label: 'Delta', icon: ArrowUpDown, available: isRaceType },
-    { key: 'tempos', label: 'Tempos', icon: Clock, available: isRaceType && hasTiming },
+    { key: 'tempos', label: 'Tempos', icon: Clock, available: hasTiming },
     { key: 'stints', label: 'Stints', icon: Circle, available: isRaceType && hasTires },
     { key: 'equipe', label: 'Equipe', icon: Users, available: isRaceType },
   ];
