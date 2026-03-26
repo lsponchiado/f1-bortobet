@@ -21,6 +21,7 @@ interface GridRowProps {
   showSectors?: boolean;
   showSpeed?: boolean;
   showPitStops?: boolean;
+  leaderLapTime?: number;
   bestSectors?: { s1: number | null; s2: number | null; s3: number | null };
   availableDrivers?: GridDriver[];
   allDrivers?: GridDriver[];
@@ -37,6 +38,7 @@ const GridRow = memo(function GridRow({
   showSectors,
   showSpeed,
   showPitStops,
+  leaderLapTime,
   bestSectors,
   availableDrivers,
   allDrivers,
@@ -69,7 +71,7 @@ const GridRow = memo(function GridRow({
       />
 
       {showDelta && <GridDelta delta={delta} />}
-      {showTiming && <GridTiming timing={timing} position={position} />}
+      {showTiming && <GridTiming timing={timing} position={position} leaderLapTime={leaderLapTime} />}
       {showTires && <GridTires tireStints={tireStints} />}
       {showSectors && <GridSectors sectors={sectors} bestSectors={bestSectors} />}
       {showSpeed && <GridSpeed speed={speed} drsOn={drsOn} />}

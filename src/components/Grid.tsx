@@ -14,6 +14,7 @@ interface GridProps {
   showSectors?: boolean;
   showSpeed?: boolean;
   showPitStops?: boolean;
+  leaderLapTime?: number;
   bestSectors?: { s1: number | null; s2: number | null; s3: number | null };
   rowGap?: string;
 }
@@ -30,6 +31,7 @@ export function Grid({
   showSectors = false,
   showSpeed = false,
   showPitStops = false,
+  leaderLapTime,
   bestSectors,
   rowGap = 'gap-2',
 }: GridProps) {
@@ -61,6 +63,7 @@ export function Grid({
           showSectors={showSectors}
           showSpeed={showSpeed}
           showPitStops={showPitStops}
+          leaderLapTime={leaderLapTime}
           bestSectors={bestSectors}
           availableDrivers={availableDrivers}
           allDrivers={allDrivers}

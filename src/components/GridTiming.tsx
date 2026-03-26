@@ -28,7 +28,7 @@ function formatGap(seconds: number): string {
   return `+${seconds.toFixed(3)}`;
 }
 
-export function GridTiming({ timing, position }: { timing?: TimingData; position: number }) {
+export function GridTiming({ timing, position, leaderLapTime }: { timing?: TimingData; position: number; leaderLapTime?: number }) {
   if (!timing) {
     return (
       <div className="flex shrink-0 items-center justify-center rounded-sm bg-gray-800" style={BADGE_SMALL}>
@@ -38,16 +38,30 @@ export function GridTiming({ timing, position }: { timing?: TimingData; position
   }
 
   const isLeader = position === 1;
+  const hasGaps = timing.gapToLeader != null || timing.interval != null;
 
   let topLine = '';
   let bottomLine = '';
 
-  if (isLeader && timing.bestLapTime) {
+  if (hasGaps) {
+    // Corrida/Sprint: gap ao líder + intervalo
+    if (isLeader && timing.bestLapTime) {
+      topLine = formatLapTime(timing.bestLapTime);
+      bottomLine = 'LEADER';
+    } else {
+      topLine = timing.gapToLeader != null ? formatGap(timing.gapToLeader) : '--';
+      bottomLine = timing.interval != null ? formatGap(timing.interval) : '--';
+    }
+  } else if (timing.bestLapTime) {
+    // Practice/Qualifying: tempo de volta + gap ao melhor
     topLine = formatLapTime(timing.bestLapTime);
-    bottomLine = 'LEADER';
+    if (isLeader) {
+      bottomLine = 'BEST';
+    } else if (leaderLapTime) {
+      bottomLine = formatGap(timing.bestLapTime - leaderLapTime);
+    }
   } else {
-    topLine = timing.gapToLeader != null ? formatGap(timing.gapToLeader) : '--';
-    bottomLine = timing.interval != null ? formatGap(timing.interval) : '--';
+    topLine = '--';
   }
 
   return (

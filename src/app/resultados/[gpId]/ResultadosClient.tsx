@@ -135,20 +135,27 @@ export function ResultadosClient({ sessions, gpName, currentGpId, allGps }: Resu
 
   const viewOptions: { key: ViewOption; label: string; icon: React.ElementType; available: boolean }[] = [
     { key: 'delta', label: 'Delta', icon: ArrowUpDown, available: isRaceType },
-    { key: 'tempos', label: 'Tempos', icon: Clock, available: hasTiming },
-    { key: 'stints', label: 'Stints', icon: Circle, available: isRaceType && hasTires },
-    { key: 'equipe', label: 'Equipe', icon: Users, available: isRaceType },
+    { key: 'tempos', label: 'Tempos', icon: Clock, available: true },
+    { key: 'stints', label: 'Stints', icon: Circle, available: true },
+    { key: 'equipe', label: 'Equipe', icon: Users, available: true },
   ];
 
   const availableOptions = viewOptions.filter(o => o.available);
 
+  // Se a view ativa não está disponível nesta sessão, cai pra tempos
+  const effectiveView = availableOptions.some(o => o.key === activeView) ? activeView : 'tempos';
+
+  // Melhor tempo de volta (P1) para calcular gaps em practice/qualifying
+  const leaderLapTime = rows[0]?.timing?.bestLapTime ?? undefined;
+
   const gridProps = {
     allDrivers: [] as [],
     showDropdown: false,
-    showDelta: activeView === 'delta' && isRaceType,
+    showDelta: effectiveView === 'delta',
     showBadges: false,
-    showTiming: activeView === 'tempos',
-    showTires: activeView === 'stints',
+    showTiming: effectiveView === 'tempos',
+    showTires: effectiveView === 'stints',
+    leaderLapTime,
     rowGap: 'gap-2',
     onDriverSelect: () => {},
   };
@@ -166,7 +173,7 @@ export function ResultadosClient({ sessions, gpName, currentGpId, allGps }: Resu
           onSessionChange={setActiveSessionId}
         />
 
-        {availableOptions.length > 1 && (
+        {availableOptions.length > 0 && (
           <div className="flex justify-center">
             <div className="inline-flex gap-1 bg-[#1f1f27] border border-white/5 rounded-xl p-1">
               {availableOptions.map(({ key, label, icon: Icon }) => (
@@ -174,7 +181,7 @@ export function ResultadosClient({ sessions, gpName, currentGpId, allGps }: Resu
                   key={key}
                   onClick={() => setActiveView(key)}
                   className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase italic tracking-wider transition-all ${
-                    activeView === key
+                    effectiveView === key
                       ? 'bg-[#e10600] text-white'
                       : 'text-gray-500 hover:text-gray-300'
                   }`}
@@ -188,7 +195,7 @@ export function ResultadosClient({ sessions, gpName, currentGpId, allGps }: Resu
         )}
       </div>
 
-      {activeView === 'equipe' && activeSession ? (
+      {effectiveView === 'equipe' && activeSession ? (
         <TeamDuel entries={activeSession.entries} />
       ) : (
         <>
