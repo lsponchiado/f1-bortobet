@@ -335,46 +335,35 @@ export async function resyncSessionResults(sessionId: number): Promise<{ success
   }
 }
 
-export async function syncAllPending(): Promise<{
+export async function syncGpSessions(gpId: number): Promise<{
   success: boolean;
-  results: Array<{ sessionId: number; gpName: string; type: string; status: 'synced' | 'skipped' | 'error'; error?: string }>;
+  results: Array<{ sessionType: string; status: 'synced' | 'no_data' | 'error'; error?: string }>;
 }> {
   await requireAdmin();
 
-  const activeSeason = await prisma.season.findFirst({ where: { isActive: true } });
-  if (!activeSeason) return { success: false, results: [] };
-
-  const now = new Date();
-  const twoDaysAgo = new Date(now.getTime() - 48 * 60 * 60 * 1000);
-
-  // Sessions that happened, have openf1Key, and either have no entries or are recent (for corrections)
   const sessions = await prisma.session.findMany({
     where: {
-      seasonId: activeSeason.id,
-      type: { in: ['RACE', 'SPRINT'] },
+      grandPrixId: gpId,
       cancelled: false,
       openf1Key: { not: null },
-      date: { lte: now },
     },
-    include: {
-      grandPrix: { select: { name: true } },
-      _count: { select: { entries: true } },
-    },
-    orderBy: { date: 'desc' },
+    orderBy: { date: 'asc' },
   });
 
-  // Only sync: no entries yet, or session within last 48h (corrections)
-  const toSync = sessions.filter(s => s._count.entries === 0 || s.date >= twoDaysAgo);
+  const SESSION_ORDER: Record<string, number> = {
+    PRACTICE_1: 1, PRACTICE_2: 2, PRACTICE_3: 3,
+    SPRINT_QUALIFYING: 4, QUALIFYING: 5, SPRINT: 6, RACE: 7,
+  };
 
-  const results: Array<{ sessionId: number; gpName: string; type: string; status: 'synced' | 'skipped' | 'error'; error?: string }> = [];
+  const sorted = sessions.sort((a, b) => (SESSION_ORDER[a.type] ?? 99) - (SESSION_ORDER[b.type] ?? 99));
 
-  for (const s of toSync) {
+  const results: Array<{ sessionType: string; status: 'synced' | 'no_data' | 'error'; error?: string }> = [];
+
+  for (const s of sorted) {
     const result = await resyncSessionResults(s.id);
     results.push({
-      sessionId: s.id,
-      gpName: s.grandPrix.name,
-      type: s.type,
-      status: result.success ? 'synced' : 'error',
+      sessionType: s.type,
+      status: result.success ? 'synced' : result.error?.includes('Sem resultados') ? 'no_data' : 'error',
       error: result.error,
     });
   }
@@ -386,30 +375,34 @@ export async function syncAllPending(): Promise<{
   return { success: true, results };
 }
 
-export async function getResyncSessions() {
+export async function getResyncGps() {
   await requireAdmin();
 
   const activeSeason = await prisma.season.findFirst({ where: { isActive: true } });
   if (!activeSeason) return [];
 
-  const sessions = await prisma.session.findMany({
+  const now = new Date();
+
+  const gps = await prisma.grandPrix.findMany({
     where: {
-      seasonId: activeSeason.id,
-      type: { in: ['RACE', 'SPRINT'] },
       cancelled: false,
-      openf1Key: { not: null },
+      sessions: { some: { seasonId: activeSeason.id, date: { lte: now } } },
     },
-    include: { grandPrix: { select: { name: true } } },
-    orderBy: { date: 'desc' },
+    include: {
+      sessions: {
+        where: { cancelled: false, seasonId: activeSeason.id },
+        orderBy: { date: 'asc' },
+        select: { type: true, date: true, round: true },
+      },
+    },
+    orderBy: { name: 'asc' },
   });
 
-  return sessions.map(s => ({
-    id: s.id,
-    type: s.type,
-    round: s.round,
-    date: s.date.toISOString(),
-    gpName: s.grandPrix.name,
-    openf1Key: s.openf1Key!,
+  return gps.map(gp => ({
+    id: gp.id,
+    name: gp.name,
+    round: gp.sessions[0]?.round ?? 0,
+    sessionCount: gp.sessions.length,
   }));
 }
 

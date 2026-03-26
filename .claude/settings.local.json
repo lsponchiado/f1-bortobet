@@ -129,7 +129,30 @@
       "Bash(npx web-push:*)",
       "Bash(curl -s -o /dev/null -w \"%{http_code}\" --max-time 5 http://localhost:3000)",
       "Bash(grep -l \"VAPID\\\\|CRON_SECRET\" .env*)",
-      "Bash(grep -E \"\"\"build\"\":|\"\"deploy\"\":\" package.json)"
+      "Bash(grep -E \"\"\"build\"\":|\"\"deploy\"\":\" package.json)",
+      "Bash(sshpass -p 'hWeKmPhmCFfu' ssh -o StrictHostKeyChecking=no root@178.156.220.69 \"dokku ps:report f1-bortobet\")",
+      "Bash(brew install:*)",
+      "Bash(sshpass -p 'hWeKmPhmCFfu' ssh -o StrictHostKeyChecking=no root@178.156.220.69 \"dokku logs f1-bortobet --num 20\")",
+      "Bash(sshpass -p 'hWeKmPhmCFfu' ssh -o StrictHostKeyChecking=no root@178.156.220.69 \"dokku run f1-bortobet cat package.json\")",
+      "Bash(sshpass -p 'hWeKmPhmCFfu' ssh -o StrictHostKeyChecking=no root@178.156.220.69 \"dokku git:report f1-bortobet\")",
+      "Bash(sshpass -p 'hWeKmPhmCFfu' ssh -o StrictHostKeyChecking=no root@178.156.220.69 \"dokku events:list f1-bortobet 2>/dev/null || dokku tags:report f1-bortobet 2>/dev/null || docker images dokku/f1-bortobet --format ''{{.CreatedAt}} {{.Tag}}''\")",
+      "Bash(sshpass -p 'hWeKmPhmCFfu' ssh -o StrictHostKeyChecking=no root@178.156.220.69 \"docker images dokku/f1-bortobet\")",
+      "Bash(sshpass -p 'hWeKmPhmCFfu' ssh -o StrictHostKeyChecking=no root@178.156.220.69 \"cd /home/dokku/f1-bortobet && git log --oneline -5 2>/dev/null || echo ''no git access''\")",
+      "Bash(gh run:*)",
+      "Bash(git remote:*)",
+      "Bash(GIT_SSH_COMMAND=\"sshpass -p ''hWeKmPhmCFfu'' ssh -o StrictHostKeyChecking=no\" git push dokku main:master --force)",
+      "Bash(sshpass -p 'hWeKmPhmCFfu' ssh -o StrictHostKeyChecking=no root@178.156.220.69 \"cd /tmp && git clone https://github.com/lsponchiado/f1-bortobet.git f1-deploy && cd f1-deploy && git push dokku@localhost:f1-bortobet main:master --force 2>&1; rm -rf /tmp/f1-deploy\")",
+      "Bash(sshpass -p 'hWeKmPhmCFfu' ssh -o StrictHostKeyChecking=no root@178.156.220.69 \"cd /tmp && GIT_SSH_COMMAND=''ssh -o StrictHostKeyChecking=no'' git clone https://github.com/lsponchiado/f1-bortobet.git f1-deploy 2>&1\")",
+      "Bash(sshpass -p 'hWeKmPhmCFfu' ssh -o StrictHostKeyChecking=no root@178.156.220.69 \"cd /tmp/f1-deploy && git log --oneline -3\")",
+      "Bash(sshpass -p 'hWeKmPhmCFfu' ssh -o StrictHostKeyChecking=no root@178.156.220.69 \"cd /tmp/f1-deploy && git push ssh://dokku@localhost:22/f1-bortobet main:master --force 2>&1\")",
+      "Bash(sshpass -p 'hWeKmPhmCFfu' ssh -o StrictHostKeyChecking=no root@178.156.220.69 \"cd /tmp/f1-deploy && GIT_SSH_COMMAND=''ssh -o StrictHostKeyChecking=no'' git push ssh://dokku@localhost:22/f1-bortobet main:master --force 2>&1\")",
+      "Bash(sshpass -p 'hWeKmPhmCFfu' ssh -o StrictHostKeyChecking=no root@178.156.220.69 \"git config --global --add safe.directory /tmp/f1-deploy/.git && git config --global --add safe.directory /tmp/f1-deploy && dokku git:sync f1-bortobet /tmp/f1-deploy main 2>&1\")",
+      "Bash(sshpass -p 'hWeKmPhmCFfu' ssh -o StrictHostKeyChecking=no root@178.156.220.69 \"chown -R dokku:dokku /tmp/f1-deploy && dokku git:sync f1-bortobet /tmp/f1-deploy main 2>&1\")",
+      "Bash(sshpass -p 'hWeKmPhmCFfu' ssh -o StrictHostKeyChecking=no root@178.156.220.69 \"chown -R dokku:dokku /tmp/f1-deploy && su - dokku -c ''dokku git:sync f1-bortobet /tmp/f1-deploy main'' 2>&1\")",
+      "Bash(sshpass -p 'hWeKmPhmCFfu' ssh -o StrictHostKeyChecking=no root@178.156.220.69 \"dokku ps:rebuild f1-bortobet 2>&1\")",
+      "Bash(sshpass -p 'hWeKmPhmCFfu' ssh -o StrictHostKeyChecking=no root@178.156.220.69 \"dokku run f1-bortobet npx prisma db push 2>&1\")",
+      "Bash(sshpass -p 'hWeKmPhmCFfu' ssh -o StrictHostKeyChecking=no root@178.156.220.69 \"rm -rf /tmp/f1-deploy\")",
+      "Bash(find /Users/lsponchiado/Documents/Dev/f1-bortobet/prisma/migrations -type f -name *.sql)"
     ]
   }
 }

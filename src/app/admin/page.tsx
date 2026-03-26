@@ -2,7 +2,7 @@ import { prisma } from '@/lib/prisma';
 import { redirect } from 'next/navigation';
 import { Navbar } from '@/components/Navbar';
 import { AdminClient } from './AdminClient';
-import { getConfigData, getResyncSessions } from '@/lib/admin-actions';
+import { getConfigData, getResyncGps } from '@/lib/admin-actions';
 import { getAuthSession, getDisplayUsername } from '@/lib/auth-utils';
 
 export default async function AdminPage() {
@@ -13,7 +13,7 @@ export default async function AdminPage() {
   const configData = await getConfigData();
   const seasonId = configData.season?.id;
 
-  const [allUsers, strollCount, totalGps, cancelledGps, resyncSessions] = await Promise.all([
+  const [allUsers, strollCount, totalGps, cancelledGps, resyncGps] = await Promise.all([
     prisma.user.findMany({
       select: { id: true, username: true, name: true },
       orderBy: { username: 'asc' },
@@ -30,7 +30,7 @@ export default async function AdminPage() {
         sessions: { some: { seasonId, type: 'RACE' } },
       },
     }),
-    getResyncSessions(),
+    getResyncGps(),
   ]);
 
   return (
@@ -48,7 +48,7 @@ export default async function AdminPage() {
             </p>
           </div>
 
-          <AdminClient configData={configData} allUsers={allUsers} strollCount={strollCount} totalGps={totalGps} cancelledGps={cancelledGps} resyncSessions={resyncSessions} />
+          <AdminClient configData={configData} allUsers={allUsers} strollCount={strollCount} totalGps={totalGps} cancelledGps={cancelledGps} resyncGps={resyncGps} />
         </div>
       </main>
     </div>

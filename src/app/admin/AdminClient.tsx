@@ -302,9 +302,9 @@ function UserBypassPanel({ users }: { users: UserOption[] }) {
   );
 }
 
-type ResyncSession = { id: number; type: string; round: number; date: string; gpName: string; openf1Key: number };
+type ResyncGp = { id: number; name: string; round: number; sessionCount: number };
 
-export function AdminClient({ configData, allUsers, strollCount, totalGps, cancelledGps: initialCancelledGps, resyncSessions }: { configData: ConfigData; allUsers: UserOption[]; strollCount: number; totalGps: number; cancelledGps: number; resyncSessions: ResyncSession[] }) {
+export function AdminClient({ configData, allUsers, strollCount, totalGps, cancelledGps: initialCancelledGps, resyncGps }: { configData: ConfigData; allUsers: UserOption[]; strollCount: number; totalGps: number; cancelledGps: number; resyncGps: ResyncGp[] }) {
   const [cancelledGps, setCancelledGps] = useState(initialCancelledGps);
 
   const handleCancelledChange = (delta: number) => {
@@ -317,7 +317,7 @@ export function AdminClient({ configData, allUsers, strollCount, totalGps, cance
       <UserBypassPanel users={allUsers} />
       <SeasonConfigPanel initialConfig={configData.season?.config ?? null} strollCount={strollCount} totalGps={totalGps} cancelledGps={cancelledGps} />
       <RoundConfigPanel  raceSessions={configData.raceSessions} onCancelledChange={handleCancelledChange} />
-      <ResyncPanel sessions={resyncSessions} />
+      <ResyncPanel gps={resyncGps} />
       <InvitePanel />
       <BackupPanel />
     </div>
