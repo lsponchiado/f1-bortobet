@@ -9,9 +9,11 @@ dotenv.config({ path: path.resolve(__dirname, '../../.env') });
  * Sync Worker
  *
  * Traduz dados consolidados do OpenF1 (MongoDB) para o Bortobet (PostgreSQL).
- * Escuta MQTT para saber quando sessões iniciam/terminam.
  *
- * Eventos:
+ * 1. Escuta MQTT para saber quando sessões iniciam/terminam (tempo real)
+ * 2. A cada 6h, confere se o PostgreSQL bate com o MongoDB e corrige (periódico)
+ *
+ * Eventos MQTT:
  *   - Sessão iniciada  → aplica apostas backup
  *   - Sessão finalizada → sincroniza resultados, safety cars, fastest lap
  *   - Drivers atualizado → sincroniza pilotos e equipes
@@ -33,7 +35,7 @@ const adapter = new PrismaPg(pool);
 const prisma = new PrismaClient({ adapter });
 
 const MONGO_URI = process.env.OPENF1_MONGO_URI || 'mongodb://localhost:27017';
-const MONGO_DB = process.env.OPENF1_MONGO_DB || 'openf1';
+const MONGO_DB = process.env.OPENF1_MONGO_DB || 'openf1-livetiming';
 const MQTT_BROKER = process.env.OPENF1_MQTT_BROKER || 'mqtt://localhost:1883';
 const MQTT_USER = process.env.OPENF1_MQTT_USER || 'openf1';
 const MQTT_PASS = process.env.OPENF1_MQTT_PASS || 'openf1';
@@ -337,8 +339,9 @@ async function syncOpenF1Keys() {
     const bortobetType = session.type;
     const gpName = session.grandPrix.name.toLowerCase();
 
-    // Mapear tipo do Bortobet → tipo do OpenF1
-    const openf1TypeMap: Record<string, string[]> = {
+    // Mapear tipo do Bortobet → session_name do OpenF1 (após normalização)
+    // O schedule.py normaliza: Sprint→(type:Race,name:Sprint), Sprint Qualifying→(type:Qualifying,name:Sprint Qualifying)
+    const openf1NameMap: Record<string, string[]> = {
       'RACE': ['Race'],
       'SPRINT': ['Sprint'],
       'QUALIFYING': ['Qualifying'],
@@ -348,17 +351,16 @@ async function syncOpenF1Keys() {
       'PRACTICE_3': ['Practice 3'],
     };
 
-    const validTypes = openf1TypeMap[bortobetType] || [];
+    const validNames = openf1NameMap[bortobetType] || [];
 
-    // Encontrar match por nome do GP (parcial) + tipo + ano
+    // Encontrar match por nome do GP (parcial) + session_name + ano
     const match = openf1Sessions.find(o => {
-      const oName = (o.session_name || o.location || '').toLowerCase();
-      const oType = o.session_type || o.session_name || '';
+      const oSessionName = o.session_name || '';
+      const oLocation = (o.location || '').toLowerCase();
       return (
         o.year === session.season.year &&
-        validTypes.includes(oType) &&
-        (gpName.includes(oName) || oName.includes(gpName) ||
-         (o.location && gpName.includes(o.location.toLowerCase())))
+        validNames.includes(oSessionName) &&
+        (gpName.includes(oLocation) || oLocation.includes(gpName))
       );
     });
 
@@ -464,6 +466,98 @@ mqttClient.on('offline', () => {
   console.warn('[sync] MQTT desconectado, reconectando...');
 });
 
+// ── Sync periódico (a cada 6h) ───────────────────────────────────────────────
+
+const PERIODIC_INTERVAL = 6 * 60 * 60 * 1000; // 6 horas
+
+async function periodicSync() {
+  console.log('[sync] ═══ Sync periódico iniciado ═══');
+
+  try {
+    // 1. Mapear openf1Keys de sessões novas
+    await syncOpenF1Keys();
+
+    // 2. Sync pilotos/equipes
+    await syncDrivers();
+
+    // 3. Buscar sessões passadas que precisam de verificação
+    const now = new Date();
+    const fourteenDaysAgo = new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000);
+
+    const activeSeason = await prisma.season.findFirst({ where: { isActive: true } });
+    if (!activeSeason) {
+      console.log('[sync] Nenhuma temporada ativa');
+      return;
+    }
+
+    // Sessões recentes (14 dias) ou sem resultado nenhum
+    const sessions = await prisma.session.findMany({
+      where: {
+        seasonId: activeSeason.id,
+        cancelled: false,
+        openf1Key: { not: null },
+        date: { lt: now },
+        OR: [
+          { date: { gte: fourteenDaysAgo } },
+          { entries: { none: {} } },
+        ],
+      },
+      include: { grandPrix: true },
+      orderBy: { date: 'asc' },
+    });
+
+    if (sessions.length === 0) {
+      console.log('[sync] Nenhuma sessão para sincronizar');
+      return;
+    }
+
+    console.log(`[sync] ${sessions.length} sessões para verificar`);
+
+    let synced = 0;
+    let noData = 0;
+    let errors = 0;
+
+    for (const s of sessions) {
+      try {
+        const hasResults = await db.collection('session_result')
+          .find({ session_key: s.openf1Key }).limit(1).toArray();
+
+        if (hasResults.length > 0) {
+          await syncSessionResults(s.openf1Key!);
+          synced++;
+        } else {
+          noData++;
+          console.log(`[sync] Sessão ${s.openf1Key} (${s.grandPrix.name} ${s.type}): sem session_result no MongoDB`);
+        }
+      } catch (err) {
+        errors++;
+        console.error(`[sync] Erro na sessão ${s.openf1Key}:`, err);
+      }
+    }
+
+    console.log(`[sync] ═══ Periódico: ${synced} sincronizadas, ${noData} sem dados, ${errors} erros ═══`);
+
+    // Revalidar cache do Next.js se houve sincronização
+    if (synced > 0) {
+      try {
+        const appUrl = process.env.NEXTAUTH_URL || 'http://localhost:3000';
+        const cronSecret = process.env.CRON_SECRET;
+        if (cronSecret) {
+          await fetch(`${appUrl}/api/revalidate`, {
+            method: 'POST',
+            headers: { 'x-cron-secret': cronSecret },
+          });
+          console.log('[sync] Cache do Next.js revalidado');
+        }
+      } catch (err) {
+        console.warn('[sync] Falha ao revalidar cache:', err);
+      }
+    }
+  } catch (err) {
+    console.error('[sync] Erro no sync periódico:', err);
+  }
+}
+
 // ── Inicialização ────────────────────────────────────────────────────────────
 
 async function run() {
@@ -476,6 +570,11 @@ async function run() {
   // Sync inicial
   await syncDrivers();
   await syncOpenF1Keys();
+
+  // Sync periódico a cada 6 horas
+  console.log('[sync] Sync periódico configurado: a cada 6h');
+  await periodicSync(); // roda uma vez na inicialização
+  setInterval(periodicSync, PERIODIC_INTERVAL);
 
   console.log('[sync] Aguardando eventos MQTT...');
 }

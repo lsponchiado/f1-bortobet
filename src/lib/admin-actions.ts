@@ -227,74 +227,105 @@ export async function generateInviteCode(category: 'HAAS' | 'STROLL'): Promise<{
   return { success: false, error: 'Não foi possível gerar um código único' };
 }
 
-// ── Re-sync de resultados via OpenF1 ─────────────────────────────────────────
+// ── Re-sync de resultados via MongoDB (OpenF1 local) ─────────────────────────
 
-export async function resyncSessionResults(sessionId: number): Promise<{ success: boolean; error?: string }> {
-  await requireAdmin();
+import { MongoClient } from 'mongodb';
 
-  const session = await prisma.session.findUnique({
-    where: { id: sessionId },
-    select: { id: true, openf1Key: true, type: true, grandPrix: { select: { name: true } } },
-  });
+let _mongoDb: import('mongodb').Db | null = null;
+async function getMongoDB() {
+  if (_mongoDb) return _mongoDb;
+  const uri = process.env.OPENF1_MONGO_URI || 'mongodb://localhost:27017';
+  const dbName = process.env.OPENF1_MONGO_DB || 'openf1-livetiming';
+  const client = new MongoClient(uri);
+  await client.connect();
+  _mongoDb = client.db(dbName);
+  return _mongoDb;
+}
 
-  if (!session) return { success: false, error: 'Sessão não encontrada' };
-  if (!session.openf1Key) return { success: false, error: 'Sessão sem openf1Key mapeado' };
+function parseGap(val: unknown): number | null {
+  if (val == null) return null;
+  if (typeof val === 'number') return val;
+  if (typeof val === 'string') {
+    if (val === 'LAP' || val === '') return null;
+    const parsed = parseFloat(val.replace('+', ''));
+    return isNaN(parsed) ? null : parsed;
+  }
+  return null;
+}
 
+async function syncSessionFromMongo(sessionId: number, openf1Key: number): Promise<'synced' | 'no_data' | 'error'> {
   try {
-    // Busca resultados da API REST do OpenF1
-    const baseUrl = process.env.OPENF1_API_URL || 'https://api.openf1.org';
+    const db = await getMongoDB();
 
-    const [resultsRes, gridRes, lapsRes, rcRes] = await Promise.all([
-      fetch(`${baseUrl}/v1/session_result?session_key=${session.openf1Key}`),
-      fetch(`${baseUrl}/v1/starting_grid?session_key=${session.openf1Key}`),
-      fetch(`${baseUrl}/v1/laps?session_key=${session.openf1Key}`),
-      fetch(`${baseUrl}/v1/race_control?session_key=${session.openf1Key}&category=SafetyCar`),
-    ]);
+    // Dados consolidados
+    const results = await db.collection('session_result')
+      .find({ session_key: openf1Key }).toArray();
 
-    const [resultsRaw, gridRaw, lapsRaw, rcMsgsRaw] = await Promise.all([
-      resultsRes.json().catch(() => []),
-      gridRes.json().catch(() => []),
-      lapsRes.json().catch(() => []),
-      rcRes.json().catch(() => []),
-    ]);
-
-    const results = Array.isArray(resultsRaw) ? resultsRaw : [];
-    const grid = Array.isArray(gridRaw) ? gridRaw : [];
-    const laps = Array.isArray(lapsRaw) ? lapsRaw : [];
-    const rcMsgs = Array.isArray(rcMsgsRaw) ? rcMsgsRaw : [];
-
-    if (results.length === 0) {
-      return { success: false, error: 'Sem resultados na OpenF1 para esta sessão' };
-    }
+    if (results.length === 0) return 'no_data';
 
     // Starting grid
+    const startingGrid = await db.collection('starting_grid')
+      .find({ session_key: openf1Key }).toArray();
+
     const startPositionMap = new Map<number, number>();
-    for (const g of grid) {
+    for (const g of startingGrid) {
       if (g.driver_number && g.position) startPositionMap.set(g.driver_number, g.position);
     }
 
     // Fastest lap
-    const validLaps = laps.filter((l: { lap_duration: number | null }) => l.lap_duration != null);
-    validLaps.sort((a: { lap_duration: number | null }, b: { lap_duration: number | null }) => a.lap_duration! - b.lap_duration!);
-    const fastestLapDriverNumber = validLaps[0]?.driver_number || null;
+    const laps = await db.collection('laps')
+      .find({ session_key: openf1Key, lap_duration: { $ne: null } }).toArray();
+
+    const bestLapMap = new Map<number, number>();
+    for (const l of laps) {
+      if (!l.driver_number || !l.lap_duration) continue;
+      const current = bestLapMap.get(l.driver_number);
+      if (!current || l.lap_duration < current) bestLapMap.set(l.driver_number, l.lap_duration);
+    }
+    const sortedLaps = [...laps].sort((a, b) => (a.lap_duration ?? Infinity) - (b.lap_duration ?? Infinity));
+    const fastestLapDriverNum = sortedLaps[0]?.driver_number || null;
 
     // Safety cars
-    const scCount = rcMsgs.filter((m: { message?: string }) =>
-      m.message?.toLowerCase().includes('deployed') &&
-      !m.message?.toLowerCase().includes('virtual')
+    const raceControlMsgs = await db.collection('race_control')
+      .find({ session_key: openf1Key, category: 'SafetyCar' }).toArray();
+
+    const scCount = raceControlMsgs.filter(m =>
+      (m.message || '').toLowerCase().includes('deployed') &&
+      !(m.message || '').toLowerCase().includes('virtual')
     ).length;
-    const vscCount = rcMsgs.filter((m: { message?: string }) =>
-      m.message?.toLowerCase().includes('virtual') &&
-      m.message?.toLowerCase().includes('deployed')
+    const vscCount = raceControlMsgs.filter(m =>
+      (m.message || '').toLowerCase().includes('virtual') &&
+      (m.message || '').toLowerCase().includes('deployed')
     ).length;
 
-    // Atualizar SC/VSC na sessão
-    await prisma.session.update({
-      where: { id: session.id },
-      data: { scCount, vscCount },
-    });
+    await prisma.session.update({ where: { id: sessionId }, data: { scCount, vscCount } });
 
-    // Mapear drivers
+    // Stints
+    const stintsData = await db.collection('stints')
+      .find({ session_key: openf1Key }).sort({ stint_number: 1 }).toArray();
+
+    const stintMap = new Map<number, string[]>();
+    for (const s of stintsData) {
+      if (!s.driver_number || !s.compound) continue;
+      if (!stintMap.has(s.driver_number)) stintMap.set(s.driver_number, []);
+      const compound = (s.compound as string).toUpperCase();
+      const lapStart = s.lap_start ?? 0;
+      const lapEnd = s.lap_end ?? lapStart;
+      stintMap.get(s.driver_number)!.push(`${compound}:${lapEnd - lapStart + 1}`);
+    }
+
+    // Intervals
+    const intervals = await db.collection('intervals')
+      .find({ session_key: openf1Key }).sort({ date: -1 }).toArray();
+
+    const intervalMap = new Map<number, { gap_to_leader: unknown; interval: unknown }>();
+    for (const iv of intervals) {
+      if (iv.driver_number && !intervalMap.has(iv.driver_number)) {
+        intervalMap.set(iv.driver_number, { gap_to_leader: iv.gap_to_leader, interval: iv.interval });
+      }
+    }
+
+    // Upsert usando dados consolidados
     const allDrivers = await prisma.driver.findMany();
     const driverByNumber = new Map(allDrivers.map(d => [d.number, d]));
 
@@ -303,40 +334,34 @@ export async function resyncSessionResults(sessionId: number): Promise<{ success
       const driver = driverByNumber.get(r.driver_number);
       if (!driver) continue;
 
+      const gaps = intervalMap.get(r.driver_number);
+      const data = {
+        startPosition: startPositionMap.get(r.driver_number) ?? 99,
+        finishPosition: r.position ?? 99,
+        points: r.points ?? 0,
+        dnf: r.dnf === true,
+        dns: r.dns === true,
+        dsq: r.dsq === true,
+        fastestLap: r.driver_number === fastestLapDriverNum,
+        bestLapTime: bestLapMap.get(r.driver_number) ?? null,
+        gapToLeader: parseGap(r.gap_to_leader ?? gaps?.gap_to_leader),
+        interval: parseGap(gaps?.interval),
+        tireStints: stintMap.get(r.driver_number) ?? [],
+        teamId: driver.teamId,
+      };
+
       await prisma.sessionEntry.upsert({
-        where: { sessionId_driverId: { sessionId: session.id, driverId: driver.id } },
-        update: {
-          startPosition: startPositionMap.get(r.driver_number) ?? 99,
-          finishPosition: r.position ?? 99,
-          points: r.points ?? 0,
-          dnf: r.dnf === true,
-          dns: r.dns === true,
-          dsq: r.dsq === true,
-          fastestLap: r.driver_number === fastestLapDriverNumber,
-          teamId: driver.teamId,
-        },
-        create: {
-          sessionId: session.id,
-          driverId: driver.id,
-          teamId: driver.teamId,
-          startPosition: startPositionMap.get(r.driver_number) ?? 99,
-          finishPosition: r.position ?? 99,
-          points: r.points ?? 0,
-          dnf: r.dnf === true,
-          dns: r.dns === true,
-          dsq: r.dsq === true,
-          fastestLap: r.driver_number === fastestLapDriverNumber,
-        },
+        where: { sessionId_driverId: { sessionId, driverId: driver.id } },
+        update: data,
+        create: { sessionId, driverId: driver.id, ...data },
       });
       synced++;
     }
 
-    revalidateTag('results', { expire: 0 });
-    revalidateTag('ranking', { expire: 0 });
-    revalidateTag('gps', { expire: 0 });
-    return { success: true };
-  } catch (e: unknown) {
-    return { success: false, error: e instanceof Error ? e.message : 'Erro ao sincronizar' };
+    return synced > 0 ? 'synced' : 'no_data';
+  } catch (err) {
+    console.error(`[admin-sync] Erro na sessão ${sessionId}:`, err);
+    return 'error';
   }
 }
 
@@ -365,11 +390,11 @@ export async function syncGpSessions(gpId: number): Promise<{
   const results: Array<{ sessionType: string; status: 'synced' | 'no_data' | 'error'; error?: string }> = [];
 
   for (const s of sorted) {
-    const result = await resyncSessionResults(s.id);
+    const status = await syncSessionFromMongo(s.id, s.openf1Key!);
     results.push({
       sessionType: s.type,
-      status: result.success ? 'synced' : result.error?.includes('Sem resultados') ? 'no_data' : 'error',
-      error: result.error,
+      status,
+      error: status === 'no_data' ? 'Sem dados no MongoDB para esta sessão' : status === 'error' ? 'Erro ao sincronizar' : undefined,
     });
   }
 
