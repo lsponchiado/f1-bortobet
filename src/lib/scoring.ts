@@ -184,9 +184,13 @@ async function _calculateScores(filters: ScoringFilters): Promise<ScoringResult>
         pts_ += pts.fastestLap;
       }
 
-      // Hail Mary: predicted top 5 + started P20+ + actually finished top 5 (max 1)
+      // Bônus só valem se acertou a posição exata
+      const positionMatch = entry.finishPosition === item.predictedPosition;
+
+      // Hail Mary: acertou posição + predicted top 5 + started P20+ + finished top 5 (max 1)
       if (
         rc?.allowHailMary !== false &&
+        positionMatch &&
         hailMaryUsed < 1 &&
         item.predictedPosition <= 5 &&
         entry.startPosition >= 20 &&
@@ -196,9 +200,10 @@ async function _calculateScores(filters: ScoringFilters): Promise<ScoringResult>
         hailMaryUsed++;
       }
 
-      // Underdog: predicted top 3 + climbed 10+ places + actually top 3 (max 3)
+      // Underdog: acertou posição + predicted top 3 + climbed 10+ places + finished top 3 (max 3)
       if (
         rc?.allowUnderdog !== false &&
+        positionMatch &&
         underdogUsed < 3 &&
         item.predictedPosition <= 3 &&
         (entry.startPosition - entry.finishPosition) >= 10 &&
@@ -208,9 +213,10 @@ async function _calculateScores(filters: ScoringFilters): Promise<ScoringResult>
         underdogUsed++;
       }
 
-      // Freefall: predicted to drop 5+ AND actually dropped 5+ from start
+      // Freefall: acertou posição + predicted to drop 5+ AND actually dropped 5+ from start
       if (
         rc?.allowFreefall !== false &&
+        positionMatch &&
         (item.predictedPosition - entry.startPosition) >= 5 &&
         (entry.finishPosition  - entry.startPosition) >= 5
       ) {
