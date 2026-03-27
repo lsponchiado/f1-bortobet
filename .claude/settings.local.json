@@ -204,7 +204,20 @@
       "Bash(sshpass -p 'hWeKmPhmCFfu' ssh -o StrictHostKeyChecking=no root@178.156.220.69 'docker exec openf1-mongo-1 mongosh --quiet --eval \"\"db.adminCommand\\({listDatabases:1}\\).databases.forEach\\(d => { print\\(d.name + \\\\\"\" \\(\\\\\"\" + d.sizeOnDisk + \\\\\"\" bytes\\)\\\\\"\"\\); }\\);\"\"')",
       "Bash(sshpass -p 'hWeKmPhmCFfu' ssh -o StrictHostKeyChecking=no root@178.156.220.69 'docker exec openf1-mongo-1 mongosh --quiet --eval \"\"db = db.getSiblingDB\\(\\\\\"\"openf1-livetiming\\\\\"\"\\); var results = db.session_result.find\\({session_key: 11245, dnf: true}\\).toArray\\(\\); print\\(\\\\\"\"DNFs na corrida de Shanghai: \\\\\"\" + results.length\\); results.forEach\\(function\\(r\\) { print\\(\\\\\"\"  #\\\\\"\" + r.driver_number + \\\\\"\" pos:\\\\\"\" + r.position\\); }\\);\"\"')",
       "Bash(sshpass -p 'hWeKmPhmCFfu' ssh -o StrictHostKeyChecking=no root@178.156.220.69 'docker exec openf1-mongo-1 mongosh --quiet --eval \"\"db = db.getSiblingDB\\(\\\\\"\"openf1-livetiming\\\\\"\"\\); db.sessions.find\\({meeting_key: 1280}\\).forEach\\(function\\(s\\) { print\\(s.session_key + \\\\\"\" | type: \\\\\"\" + s.session_type + \\\\\"\" | name: \\\\\"\" + s.session_name\\); }\\);\"\"')",
-      "Bash(sshpass -p 'hWeKmPhmCFfu' ssh -o StrictHostKeyChecking=no root@178.156.220.69 'docker exec -i dokku.postgres.f1-bortobet-db psql -U postgres -d f1_bortobet_db -c \"\":*)"
+      "Bash(sshpass -p 'hWeKmPhmCFfu' ssh -o StrictHostKeyChecking=no root@178.156.220.69 'docker exec -i dokku.postgres.f1-bortobet-db psql -U postgres -d f1_bortobet_db -c \"\":*)",
+      "Bash(wc -l /Users/lsponchiado/Documents/Dev/f1-bortobet/src/**/*.tsx /Users/lsponchiado/Documents/Dev/f1-bortobet/src/**/*.ts)",
+      "Bash(grep -n \"executeRawUnsafe\\\\|$queryRaw\\\\|$executeRaw\" /Users/lsponchiado/Documents/Dev/f1-bortobet/src/lib/*.ts)",
+      "Bash(xargs cat:*)",
+      "Bash(grep -n \"getAuthUserId\\\\|requireAdmin\\\\|requireUser\" /Users/lsponchiado/Documents/Dev/f1-bortobet/src/lib/*.ts)",
+      "Bash(mongosh --quiet --eval ':*)",
+      "Bash(brew services:*)",
+      "Bash(lsof -iTCP:27017)",
+      "Bash(nc -z localhost 27017)",
+      "Bash(nc -z localhost 1883)",
+      "Bash(docker compose:*)",
+      "Bash(brew list:*)",
+      "Bash(sshpass -p 'hWeKmPhmCFfu' ssh -o StrictHostKeyChecking=no root@178.156.220.69 ':*)",
+      "Bash(find /Users/lsponchiado/Documents/Dev/f1-bortobet/src -type f -name *result*)"
     ]
   }
 }

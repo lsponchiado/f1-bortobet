@@ -5,10 +5,9 @@ import { getAuthSession } from '@/lib/auth-utils';
 export default async function ResultadosIndexPage() {
   await getAuthSession();
 
-  // Último GP que tem resultados (entries)
+  // Último GP que tem resultados (qualquer sessão)
   const lastWithResults = await prisma.session.findFirst({
     where: {
-      type: 'RACE',
       cancelled: false,
       grandPrix: { cancelled: false },
       entries: { some: {} },

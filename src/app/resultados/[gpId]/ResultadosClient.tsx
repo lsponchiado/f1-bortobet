@@ -86,13 +86,7 @@ export function ResultadosClient({ sessions, gpName, currentGpId, allGps }: Resu
     .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
   const [activeSessionId, setActiveSessionId] = useState<number | null>(
-    () => {
-      const race = sessionsWithEntries.find(s => s.type === 'RACE');
-      if (race) return race.id;
-      const sprint = sessionsWithEntries.find(s => s.type === 'SPRINT');
-      if (sprint) return sprint.id;
-      return sessionsWithEntries[sessionsWithEntries.length - 1]?.id ?? null;
-    }
+    () => sessionsWithEntries[sessionsWithEntries.length - 1]?.id ?? null
   );
 
   const [activeView, setActiveView] = useState<ViewOption>('delta');
