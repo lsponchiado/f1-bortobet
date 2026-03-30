@@ -263,27 +263,49 @@ async function syncSessionFromMongo(sessionId: number, openf1Key: number): Promi
 
     if (results.length === 0) return 'no_data';
 
-    // Starting grid
-    const startingGrid = await db.collection('starting_grid')
+    // Starting grid — para corrida/sprint, busca na qualifying correspondente se não achar
+    const session = await prisma.session.findUnique({ where: { id: sessionId } });
+    let startingGrid = await db.collection('starting_grid')
       .find({ session_key: openf1Key }).toArray();
+
+    if (startingGrid.length === 0 && session && (session.type === 'RACE' || session.type === 'SPRINT')) {
+      const thisSession = await db.collection('sessions')
+        .findOne({ session_key: openf1Key });
+      if (thisSession?.meeting_key) {
+        const qualType = session.type === 'SPRINT' ? 'Sprint Qualifying' : 'Qualifying';
+        const qualSession = await db.collection('sessions')
+          .findOne({ meeting_key: thisSession.meeting_key, session_name: qualType });
+        if (qualSession) {
+          startingGrid = await db.collection('starting_grid')
+            .find({ session_key: qualSession.session_key }).toArray();
+        }
+      }
+    }
 
     const startPositionMap = new Map<number, number>();
     for (const g of startingGrid) {
       if (g.driver_number && g.position) startPositionMap.set(g.driver_number, g.position);
     }
 
-    // Fastest lap
-    const laps = await db.collection('laps')
-      .find({ session_key: openf1Key, lap_duration: { $ne: null } }).toArray();
+    // Fastest lap — aggregation para pegar só a melhor volta de cada piloto
+    const bestLaps = await db.collection('laps').aggregate([
+      { $match: { session_key: openf1Key, lap_duration: { $ne: null, $gt: 0 } } },
+      { $group: { _id: '$driver_number', bestLap: { $min: '$lap_duration' } } },
+    ]).toArray();
 
     const bestLapMap = new Map<number, number>();
-    for (const l of laps) {
-      if (!l.driver_number || !l.lap_duration) continue;
-      const current = bestLapMap.get(l.driver_number);
-      if (!current || l.lap_duration < current) bestLapMap.set(l.driver_number, l.lap_duration);
+    for (const l of bestLaps) {
+      if (l._id && l.bestLap) bestLapMap.set(l._id, l.bestLap);
     }
-    const sortedLaps = [...laps].sort((a, b) => (a.lap_duration ?? Infinity) - (b.lap_duration ?? Infinity));
-    const fastestLapDriverNum = sortedLaps[0]?.driver_number || null;
+
+    let fastestLapDriverNum: number | null = null;
+    let fastestTime = Infinity;
+    for (const [driverNum, lapTime] of bestLapMap) {
+      if (lapTime < fastestTime) {
+        fastestTime = lapTime;
+        fastestLapDriverNum = driverNum;
+      }
+    }
 
     // Safety cars
     const raceControlMsgs = await db.collection('race_control')
@@ -300,13 +322,23 @@ async function syncSessionFromMongo(sessionId: number, openf1Key: number): Promi
 
     await prisma.session.update({ where: { id: sessionId }, data: { scCount, vscCount } });
 
-    // Stints
-    const stintsData = await db.collection('stints')
+    // Stints — deduplica por (driver_number, stint_number),
+    // pois o OpenF1 armazena atualizações incrementais (lap_end crescendo)
+    const stintsRaw = await db.collection('stints')
       .find({ session_key: openf1Key }).sort({ stint_number: 1 }).toArray();
 
-    const stintMap = new Map<number, string[]>();
-    for (const s of stintsData) {
+    const stintLatest = new Map<string, typeof stintsRaw[0]>();
+    for (const s of stintsRaw) {
       if (!s.driver_number || !s.compound) continue;
+      const key = `${s.driver_number}_${s.stint_number}`;
+      const existing = stintLatest.get(key);
+      if (!existing || (s.lap_end ?? 0) > (existing.lap_end ?? 0)) {
+        stintLatest.set(key, s);
+      }
+    }
+
+    const stintMap = new Map<number, string[]>();
+    for (const s of [...stintLatest.values()].sort((a, b) => a.stint_number - b.stint_number)) {
       if (!stintMap.has(s.driver_number)) stintMap.set(s.driver_number, []);
       const compound = (s.compound as string).toUpperCase();
       const lapStart = s.lap_start ?? 0;
@@ -314,15 +346,20 @@ async function syncSessionFromMongo(sessionId: number, openf1Key: number): Promi
       stintMap.get(s.driver_number)!.push(`${compound}:${lapEnd - lapStart + 1}`);
     }
 
-    // Intervals
-    const intervals = await db.collection('intervals')
-      .find({ session_key: openf1Key }).sort({ date: -1 }).toArray();
+    // Intervals — último registro por piloto via aggregation
+    const latestIntervals = await db.collection('intervals').aggregate([
+      { $match: { session_key: openf1Key } },
+      { $sort: { date: -1 } },
+      { $group: {
+        _id: '$driver_number',
+        gap_to_leader: { $first: '$gap_to_leader' },
+        interval: { $first: '$interval' },
+      }},
+    ]).toArray();
 
     const intervalMap = new Map<number, { gap_to_leader: unknown; interval: unknown }>();
-    for (const iv of intervals) {
-      if (iv.driver_number && !intervalMap.has(iv.driver_number)) {
-        intervalMap.set(iv.driver_number, { gap_to_leader: iv.gap_to_leader, interval: iv.interval });
-      }
+    for (const iv of latestIntervals) {
+      if (iv._id) intervalMap.set(iv._id, { gap_to_leader: iv.gap_to_leader, interval: iv.interval });
     }
 
     // Upsert usando dados consolidados

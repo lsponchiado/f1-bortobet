@@ -164,24 +164,29 @@ async function syncSessionResults(sessionKey: number) {
     }
   }
 
-  // Buscar todas as voltas com tempo válido
-  const laps = await db.collection('laps')
-    .find({ session_key: sessionKey, lap_duration: { $ne: null } })
-    .toArray();
+  // Buscar melhor volta de cada piloto via aggregation (mais eficiente que trazer todas)
+  const bestLaps = await db.collection('laps').aggregate([
+    { $match: { session_key: sessionKey, lap_duration: { $ne: null, $gt: 0 } } },
+    { $group: {
+      _id: '$driver_number',
+      bestLap: { $min: '$lap_duration' },
+    }},
+  ]).toArray();
 
-  // Melhor volta de cada piloto
   const bestLapMap = new Map<number, number>();
-  for (const l of laps) {
-    if (!l.driver_number || !l.lap_duration) continue;
-    const current = bestLapMap.get(l.driver_number);
-    if (!current || l.lap_duration < current) {
-      bestLapMap.set(l.driver_number, l.lap_duration);
-    }
+  for (const l of bestLaps) {
+    if (l._id && l.bestLap) bestLapMap.set(l._id, l.bestLap);
   }
 
-  // Fastest lap geral (quem fez a volta mais rápida da sessão)
-  const sortedLaps = [...laps].sort((a, b) => (a.lap_duration ?? Infinity) - (b.lap_duration ?? Infinity));
-  const fastestLapDriverNumber = sortedLaps[0]?.driver_number || null;
+  // Fastest lap geral (menor tempo entre todos os pilotos)
+  let fastestLapDriverNumber: number | null = null;
+  let fastestTime = Infinity;
+  for (const [driverNum, lapTime] of bestLapMap) {
+    if (lapTime < fastestTime) {
+      fastestTime = lapTime;
+      fastestLapDriverNumber = driverNum;
+    }
+  }
 
   // Buscar safety cars do race_control
   const raceControlMsgs = await db.collection('race_control')
@@ -220,16 +225,27 @@ async function syncSessionResults(sessionKey: number) {
     data: { scCount, vscCount },
   });
 
-  // Buscar stints (pneus) por piloto
-  const stints = await db.collection('stints')
+  // Buscar stints (pneus) por piloto — deduplica por (driver_number, stint_number),
+  // pois o OpenF1 armazena atualizações incrementais (lap_end crescendo)
+  const stintsRaw = await db.collection('stints')
     .find({ session_key: sessionKey })
     .sort({ stint_number: 1 })
     .toArray();
 
+  // Deduplica: pega o doc com maior lap_end para cada (driver_number, stint_number)
+  const stintLatest = new Map<string, typeof stintsRaw[0]>();
+  for (const s of stintsRaw) {
+    if (!s.driver_number || !s.compound) continue;
+    const key = `${s.driver_number}_${s.stint_number}`;
+    const existing = stintLatest.get(key);
+    if (!existing || (s.lap_end ?? 0) > (existing.lap_end ?? 0)) {
+      stintLatest.set(key, s);
+    }
+  }
+
   // Formato: "COMPOUND:LAPS" (ex: "MEDIUM:18")
   const stintMap = new Map<number, string[]>();
-  for (const s of stints) {
-    if (!s.driver_number || !s.compound) continue;
+  for (const s of [...stintLatest.values()].sort((a, b) => a.stint_number - b.stint_number)) {
     if (!stintMap.has(s.driver_number)) {
       stintMap.set(s.driver_number, []);
     }
@@ -240,18 +256,20 @@ async function syncSessionResults(sessionKey: number) {
     stintMap.get(s.driver_number)!.push(`${compound}:${laps}`);
   }
 
-  // Buscar intervals finais (último registro por piloto)
-  const intervals = await db.collection('intervals')
-    .find({ session_key: sessionKey })
-    .sort({ date: -1 })
-    .toArray();
+  // Buscar último interval por piloto via aggregation (mais eficiente)
+  const latestIntervals = await db.collection('intervals').aggregate([
+    { $match: { session_key: sessionKey } },
+    { $sort: { date: -1 } },
+    { $group: {
+      _id: '$driver_number',
+      gap_to_leader: { $first: '$gap_to_leader' },
+      interval: { $first: '$interval' },
+    }},
+  ]).toArray();
 
-  // Deduplica: pega o mais recente por driver_number
   const intervalMap = new Map<number, { gap_to_leader: unknown; interval: unknown }>();
-  for (const i of intervals) {
-    if (i.driver_number && !intervalMap.has(i.driver_number)) {
-      intervalMap.set(i.driver_number, { gap_to_leader: i.gap_to_leader, interval: i.interval });
-    }
+  for (const i of latestIntervals) {
+    if (i._id) intervalMap.set(i._id, { gap_to_leader: i.gap_to_leader, interval: i.interval });
   }
 
   // Mapear driver_number → Driver do Bortobet
@@ -489,6 +507,7 @@ mqttClient.on('offline', () => {
 // ── Sync periódico (a cada 6h) ───────────────────────────────────────────────
 
 const PERIODIC_INTERVAL = 6 * 60 * 60 * 1000; // 6 horas
+let isFirstSync = true;
 
 async function periodicSync() {
   console.log('[sync] ═══ Sync periódico iniciado ═══');
@@ -510,21 +529,29 @@ async function periodicSync() {
       return;
     }
 
-    // Sessões recentes (14 dias) ou sem resultado nenhum
+    // Na primeira execução, re-sincroniza TODAS as sessões passadas
+    // Nas subsequentes, apenas 14 dias recentes ou sem resultado
     const sessions = await prisma.session.findMany({
       where: {
         seasonId: activeSeason.id,
         cancelled: false,
         openf1Key: { not: null },
         date: { lt: now },
-        OR: [
-          { date: { gte: fourteenDaysAgo } },
-          { entries: { none: {} } },
-        ],
+        ...(!isFirstSync ? {
+          OR: [
+            { date: { gte: fourteenDaysAgo } },
+            { entries: { none: {} } },
+          ],
+        } : {}),
       },
       include: { grandPrix: true },
       orderBy: { date: 'asc' },
     });
+
+    if (isFirstSync) {
+      console.log(`[sync] Primeira execução: re-sincronizando TODAS as ${sessions.length} sessões`);
+      isFirstSync = false;
+    }
 
     if (sessions.length === 0) {
       console.log('[sync] Nenhuma sessão para sincronizar');

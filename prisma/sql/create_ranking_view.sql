@@ -19,6 +19,7 @@ WITH raw_scores AS (
   JOIN "Session"               s   ON s.id  = br."sessionId"
   JOIN "GrandPrix"             gp  ON gp.id = s."grandPrixId"
   WHERE NOT gp.cancelled
+    AND EXISTS (SELECT 1 FROM "SessionEntry" se WHERE se."sessionId" = s.id)
 
   UNION ALL
 
@@ -40,6 +41,7 @@ WITH raw_scores AS (
   JOIN "Session"               s   ON s.id  = bs."sessionId"
   JOIN "GrandPrix"             gp  ON gp.id = s."grandPrixId"
   WHERE NOT gp.cancelled
+    AND EXISTS (SELECT 1 FROM "SessionEntry" se WHERE se."sessionId" = s.id)
 )
 
 SELECT

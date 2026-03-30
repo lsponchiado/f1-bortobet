@@ -98,7 +98,7 @@ per_gp_pot AS (
   LEFT JOIN gps_with_results gwr ON gwr."seasonId" = tp."seasonId"
 ),
 
--- 8. Pontos por GP por usuário STROLL (exclui GPs cancelados)
+-- 8. Pontos por GP por usuário STROLL (exclui GPs cancelados, exige ao menos 1 ponto)
 gp_user_totals AS (
   SELECT
     usv."userId",
@@ -110,6 +110,7 @@ gp_user_totals AS (
   WHERE usv.category = 'STROLL'
     AND NOT gp.cancelled
   GROUP BY usv."userId", usv."seasonId", usv."grandPrixId"
+  HAVING SUM(usv.points) >= 1
 ),
 
 -- 9. Ranking por GP com DENSE_RANK (empates = mesmo rank)
