@@ -350,14 +350,3 @@ model InviteCode {
   createdAt DateTime @default(now())
   user      User?    @relation(fields: [userId], references: [id])
 }
-
-model PasswordReset {
-  id        Int      @id @default(autoincrement())
-  email     String
-  code      String
-  used      Boolean  @default(false)
-  expiresAt DateTime
-  createdAt DateTime @default(now())
-
-  @@index([email, code])
-}

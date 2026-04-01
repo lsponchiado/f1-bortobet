@@ -217,7 +217,14 @@
       "Bash(docker compose:*)",
       "Bash(brew list:*)",
       "Bash(sshpass -p 'hWeKmPhmCFfu' ssh -o StrictHostKeyChecking=no root@178.156.220.69 ':*)",
-      "Bash(find /Users/lsponchiado/Documents/Dev/f1-bortobet/src -type f -name *result*)"
+      "Bash(find /Users/lsponchiado/Documents/Dev/f1-bortobet/src -type f -name *result*)",
+      "Bash(find /Users/lsponchiado/Documents/Dev/f1-bortobet -type f -name *.sh -o -name init* -o -name setup*)",
+      "Bash(find /Users/lsponchiado/Documents/Dev/f1-bortobet/workers -type f -name *.ts)",
+      "Bash(grep -r \"prisma\\\\.$queryRaw\\\\|CREATE VIEW\\\\|CREATE OR REPLACE VIEW\" /Users/lsponchiado/Documents/Dev/f1-bortobet/workers /Users/lsponchiado/Documents/Dev/f1-bortobet/src --include=*.ts)",
+      "Bash(source /Users/lsponchiado/Documents/Dev/f1-bortobet/.env)",
+      "Bash(sshpass -p \"$HETZNER_SSH_PASS\" ssh -o StrictHostKeyChecking=no root@178.156.220.69 'docker exec openf1-mongo-1 mongosh openf1-livetiming --quiet --eval \"\":*)",
+      "Bash(grep -r \"nodemailer\\\\|resend\\\\|sendgrid\\\\|mailgun\\\\|brevo\" /Users/lsponchiado/Documents/Dev/f1-bortobet --include=*.ts --include=*.tsx --include=*.json)",
+      "Bash(grep -r \"transporter\\\\|nodemailer\\\\|sendMail\\\\|email\" /Users/lsponchiado/Documents/Dev/f1-bortobet/src --include=*.ts --include=*.tsx)"
     ]
   }
 }
